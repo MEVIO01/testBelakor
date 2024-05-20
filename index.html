@@ -12,6 +12,20 @@
         console.error("Error loading video:", e);
       });
     });
+     AFRAME.registerComponent('smooth-position', {
+      schema: {
+        factor: { type: 'number', default: 0.1 }
+      },
+      init: function () {
+        this.targetPosition = new THREE.Vector3();
+        this.el.object3D.getWorldPosition(this.targetPosition);
+      },
+      tick: function () {
+        var currentPosition = this.el.object3D.position;
+        this.targetPosition.lerp(currentPosition, this.data.factor);
+        this.el.object3D.position.copy(this.targetPosition);
+      }
+    });
   </script>
 </head>
 <body>
@@ -28,21 +42,19 @@
         preload="auto"
         response-type="arraybuffer"
         loop
-        crossorigin
-        webkit-playsinline
+        crossorigin="anonymous"
         autoplay
-        muted
-        playsinline
       ></video>
     </a-assets>
     <a-entity mindar-image-target="targetIndex: 0">
       <a-video
         src="#vid"
-        scale="1 1 1"
+        scale="0.5 0.5 0.5"
         position="0 0.1 0"
-        rotation="0 0 0"
-        class="clickable"
+        rotation="-90 0 0"
+        smooth-position="factor: 0.1"
         gesture-handler
+        animation__position="property: position; to: 0 0.1 0; dur: 1000; easing: easeInOutQuad; loop: true"
       ></a-video>
     </a-entity>
   </a-scene>
