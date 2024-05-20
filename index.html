@@ -1,59 +1,71 @@
-<head>
-  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const video = document.getElementById("vid");
-      video.addEventListener("canplay", () => {
-        console.log("Video can play");
-        video.play();
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>MindAR.js with A-Frame</title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const video = document.getElementById("vid");
+
+        // Event listener for canplay
+        video.addEventListener("canplay", () => {
+          console.log("Video can play");
+        });
+
+        // Event listener for error
+        video.addEventListener("error", (e) => {
+          console.error("Error loading video:", e);
+        });
+
+        // Event listener for marker found
+        document
+          .querySelector("a-marker")
+          .addEventListener("markerFound", () => {
+            console.log("Marker found");
+            video.play();
+          });
+
+        // Event listener for marker lost
+        document
+          .querySelector("a-marker")
+          .addEventListener("markerLost", () => {
+            console.log("Marker lost");
+            video.pause();
+          });
       });
-      video.addEventListener("error", (e) => {
-        console.error("Error loading video:", e);
-      });
-    });
-     document.registerComponent('smooth-position', {
-      schema: {
-        factor: { type: 'number', default: 0.1 }
-      },
-      init: function () {
-        this.targetPosition = new THREE.Vector3();
-        this.el.object3D.getWorldPosition(this.targetPosition);
-      },
-      tick: function () {
-        var currentPosition = this.el.object3D.position;
-        this.targetPosition.lerp(currentPosition, this.data.factor);
-        this.el.object3D.position.copy(this.targetPosition);
-      }
-    });
-  </script>
-</head>
-<body>
-  <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind;"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-  >
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-assets>
-      <video
-        id="vid"
-        src="assets/asset.mp4"
-        preload="auto"
-        response-type="arraybuffer"
-        loop
-        crossorigin="anonymous"
-        autoplay
-      ></video>
-    </a-assets>
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-video
-        src="#vid"
-        scale="1 1 1"
-        position="0 0.1 0"
-        rotation="0 0 0"
-        smooth-position="factor: 0.1"
-      ></a-video>
-    </a-entity>
-  </a-scene>
-</body>
+    </script>
+  </head>
+  <body style="margin: 0; overflow: hidden">
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets.mind;"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-assets>
+        <video
+          id="vid"
+          src="assets/asset.mp4"
+          preload="auto"
+          loop
+          crossorigin
+          webkit-playsinline
+          autoplay
+          muted
+          playsinline
+        ></video>
+      </a-assets>
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-video
+          src="#vid"
+          scale="1 1 1"
+          position="0 0.1 0"
+          rotation="0 0 0"
+          class="clickable"
+          gesture-handler
+        ></a-video>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>
