@@ -18,21 +18,18 @@
           console.error("Error loading video:", e);
         });
 
-        // Event listener for marker found
-        document
-          .querySelector("a-marker")
-          .addEventListener("markerFound", () => {
-            console.log("Marker found");
-            video.play();
-          });
+        // MindAR target events
+        const mindarTarget = document.querySelector("[mindar-image-target]");
 
-        // Event listener for marker lost
-        document
-          .querySelector("a-marker")
-          .addEventListener("markerLost", () => {
-            console.log("Marker lost");
-            video.pause();
-          });
+        mindarTarget.addEventListener("targetFound", () => {
+          console.log("Target found");
+          video.play();
+        });
+
+        mindarTarget.addEventListener("targetLost", () => {
+          console.log("Target lost");
+          video.pause();
+        });
       });
     </script>
   </head>
@@ -49,8 +46,9 @@
           src="assets/asset.mp4"
           preload="auto"
           loop
-          crossorigin
-          autoplay
+          crossorigin="anonymous"
+          webkit-playsinline
+          playsinline
         ></video>
       </a-assets>
       <a-entity mindar-image-target="targetIndex: 0">
@@ -59,8 +57,6 @@
           scale="1 1 1"
           position="0 0.1 0"
           rotation="0 0 0"
-          class="clickable"
-          gesture-handler
         ></a-video>
       </a-entity>
     </a-scene>
