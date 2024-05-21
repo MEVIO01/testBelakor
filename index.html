@@ -4,10 +4,6 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const video = document.getElementById("vid");
-      video.addEventListener("canplay", () => {
-        console.log("Video can play");
-        video.play();
-      });
       video.addEventListener("error", (e) => {
         console.error("Error loading video:", e);
       });
@@ -36,11 +32,11 @@
         id="vid"
         src="assets/asset.mp4"
         preload="auto"
-        response-type="arraybuffer"
         loop
         crossorigin
         webkit-playsinline
         autoplay
+        muted
         playsinline
       ></video>
     </a-assets>
