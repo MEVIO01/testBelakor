@@ -11,6 +11,16 @@
       video.addEventListener("error", (e) => {
         console.error("Error loading video:", e);
       });
+       const sceneEl = document.querySelector('a-scene');
+      sceneEl.addEventListener('targetFound', (event) => {
+        console.log('Target found');
+        video.play();
+      });
+      sceneEl.addEventListener('targetLost', (event) => {
+        console.log('Target lost');
+        video.pause();
+        video.currentTime = 0; // Reset the video to the beginning
+      });
     });
   </script>
 </head>
@@ -30,7 +40,6 @@
         loop
         crossorigin
         webkit-playsinline
-        muted
         autoplay
         playsinline
       ></video>
