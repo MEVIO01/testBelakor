@@ -1,99 +1,63 @@
-<head>
-  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const video = document.getElementById("vid");
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>AR.js with MindAR.js and A-Frame</title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const video = document.getElementById('vid');
+        
+        video.addEventListener('canplay', () => {
+          console.log('Video can play');
+        });
 
-      // Ensure the video is not muted and play it immediately
-      video.muted = false; // Ensure the video is not muted
+        video.addEventListener('error', (e) => {
+          console.error('Error loading video:', e);
+        });
 
-      // Play the video when it can play
-      video.addEventListener("canplay", () => {
-        console.log("Video can play");
-        video.play().catch(error => {
-          console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+        const sceneEl = document.querySelector('a-scene');
+
+        sceneEl.addEventListener('targetFound', () => {
+          console.log('Target found');
+          video.play();
+        });
+
+        sceneEl.addEventListener('targetLost', () => {
+          console.log('Target lost');
+          video.pause();
         });
       });
-
-      video.addEventListener("error", (e) => {
-        console.error("Error loading video:", e);
-      });
-
-      const sceneEl = document.querySelector('a-scene');
-      const videoEntity = document.querySelector('a-video');
-      const smoothingFactor = 0.1;
-      let lastPosition = new THREE.Vector3();
-      let lastRotation = new THREE.Euler();
-
-      sceneEl.addEventListener('targetFound', (event) => {
-        console.log('Target found');
-        if (!video.paused) {
-          video.play();
-        }
-      });
-
-      sceneEl.addEventListener('targetLost', (event) => {
-        console.log('Target lost');
-        video.pause();
-        video.currentTime = 0; // Reset the video to the beginning
-      });
-
-      sceneEl.addEventListener('object3dset', (event) => {
-        const object3D = videoEntity.object3D;
-        if (object3D) {
-          const updateSmoothing = () => {
-            const currentPosition = object3D.position.clone();
-            const currentRotation = object3D.rotation.clone();
-
-            lastPosition.lerp(currentPosition, smoothingFactor);
-            lastRotation.slerp(currentRotation, smoothingFactor);
-
-            object3D.position.copy(lastPosition);
-            object3D.rotation.copy(lastRotation);
-
-            requestAnimationFrame(updateSmoothing);
-          };
-          updateSmoothing();
-        }
-      });
-
-      // Handle autoplay for sound in different browsers
-      document.addEventListener('click', () => {
-        if (video.paused) {
-          video.play();
-        }
-      });
-    });
-  </script>
-</head>
-<body>
-  <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-  >
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-assets>
-      <video
-        id="vid"
-        src="assets/asset.mp4"
-        preload="auto"
-        loop
-        crossorigin
-        webkit-playsinline
-        playsinline
-      ></video>
-    </a-assets>
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-video
-        src="#vid"
-        scale="1 1 1"
-        position="0 0.1 0"
-        rotation="0 0 0"
-        class="clickable"
-        gesture-handler
-      ></a-video>
-    </a-entity>
-  </a-scene>
-</body>
+    </script>
+  </head>
+  <body style="margin: 0; overflow: hidden;">
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-assets>
+        <video
+          id="vid"
+          src="assets/asset.mp4"
+          preload="auto"
+          loop
+          crossorigin="anonymous"
+          webkit-playsinline
+          playsinline
+          muted
+        ></video>
+      </a-assets>
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-video
+          src="#vid"
+          scale="1 1 1"
+          position="0 0.1 0"
+          rotation="0 0 0"
+        ></a-video>
+      </a-entity>
+    </a-scene>
+  </body>
+</html>
