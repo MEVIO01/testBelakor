@@ -5,8 +5,9 @@
     document.addEventListener("DOMContentLoaded", () => {
       const video = document.getElementById("vid");
 
-      video.addEventListener("canplay", () => {
-        console.log("Video can play");
+      const playButton = document.getElementById("playButton");
+      playButton.addEventListener("click", () => {
+        video.muted = false;
         video.play();
       });
 
@@ -68,7 +69,6 @@
         crossorigin
         webkit-playsinline
         autoplay
-        muted
         playsinline
       ></video>
     </a-assets>
@@ -83,5 +83,6 @@
       ></a-video>
     </a-entity>
   </a-scene>
+  <button id="playButton">Play with Sound</button>
 </body>
 
