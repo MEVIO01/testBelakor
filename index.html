@@ -7,13 +7,13 @@
 
       // Ensure the video is not muted and play it immediately
       video.muted = false; // Ensure the video is not muted
-      video.play().catch(error => {
-        console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
-      });
 
+      // Play the video when it can play
       video.addEventListener("canplay", () => {
         console.log("Video can play");
-        video.play();
+        video.play().catch(error => {
+          console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+        });
       });
 
       video.addEventListener("error", (e) => {
@@ -57,6 +57,13 @@
           updateSmoothing();
         }
       });
+
+      // Handle autoplay for sound in different browsers
+      document.addEventListener('click', () => {
+        if (video.paused) {
+          video.play();
+        }
+      });
     });
   </script>
 </head>
@@ -90,4 +97,3 @@
     </a-entity>
   </a-scene>
 </body>
-
