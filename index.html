@@ -4,6 +4,7 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const video = document.getElementById("vid");
+      let triangleClicked = false;
 
       // Ensure the video is not muted and play it immediately
       video.muted = false; // Ensure the video is not muted
@@ -11,9 +12,13 @@
       // Play the video when it can play
       video.addEventListener("canplay", () => {
         console.log("Video can play");
-        video.play().catch(error => {
-          console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
-        });
+        if (!triangleClicked) {
+          video.pause(); // Pause the video initially
+        } else {
+          video.play().catch(error => {
+            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+          });
+        }
       });
 
       video.addEventListener("error", (e) => {
@@ -58,11 +63,12 @@
         }
       });
 
-      // Handle autoplay for sound in different browsers
-      document.addEventListener('click', () => {
-        if (video.paused) {
-          video.play();
-        }
+      // Handle click on triangle to start video
+      const triangle = document.getElementById('triangle');
+      triangle.addEventListener('click', () => {
+        triangle.setAttribute('visible', 'false'); // Hide the triangle
+        triangleClicked = true; // Set triangle clicked flag
+        video.play(); // Start playing the video
       });
     });
   </script>
@@ -83,10 +89,10 @@
         crossorigin
         webkit-playsinline
         playsinline
-        autoplay
       ></video>
     </a-assets>
     <a-entity mindar-image-target="targetIndex: 0">
+      <!-- Video plane -->
       <a-video
         src="#vid"
         scale="1 1 1"
@@ -95,7 +101,11 @@
         class="clickable"
         gesture-handler
       ></a-video>
+
+      <!-- Triangle to click -->
+      <a-entity id="triangle" geometry="primitive: triangle; vertices: 0 0 0, -0.1 0.1 0, 0.1 0.1 0" material="color: red" position="0 0.1 -0.5" rotation="-90 0 0" gesture-handler></a-entity>
     </a-entity>
   </a-scene>
 </body>
+
 
