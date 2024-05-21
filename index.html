@@ -5,6 +5,12 @@
     document.addEventListener("DOMContentLoaded", () => {
       const video = document.getElementById("vid");
 
+      // Ensure the video is not muted and play it immediately
+      video.muted = false; // Ensure the video is not muted
+      video.play().catch(error => {
+        console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+      });
+
       video.addEventListener("canplay", () => {
         console.log("Video can play");
         video.play();
@@ -51,10 +57,6 @@
           updateSmoothing();
         }
       });
-
-      // Play video with sound from the beginning
-      video.muted = false; // Ensure the video is not muted
-      video.play();
     });
   </script>
 </head>
@@ -73,7 +75,6 @@
         loop
         crossorigin
         webkit-playsinline
-        autoplay
         playsinline
       ></video>
     </a-assets>
@@ -89,3 +90,4 @@
     </a-entity>
   </a-scene>
 </body>
+
