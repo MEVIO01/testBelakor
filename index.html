@@ -4,25 +4,57 @@
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const video = document.getElementById("vid");
+
+      video.addEventListener("canplay", () => {
+        console.log("Video can play");
+        video.play();
+      });
+
       video.addEventListener("error", (e) => {
         console.error("Error loading video:", e);
       });
-       const sceneEl = document.querySelector('a-scene');
+
+      const sceneEl = document.querySelector('a-scene');
+      const videoEntity = document.querySelector('a-video');
+      const smoothingFactor = 0.1;
+      let lastPosition = new THREE.Vector3();
+      let lastRotation = new THREE.Euler();
+
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
         video.play();
       });
+
       sceneEl.addEventListener('targetLost', (event) => {
         console.log('Target lost');
         video.pause();
         video.currentTime = 0; // Reset the video to the beginning
+      });
+
+      sceneEl.addEventListener('object3dset', (event) => {
+        const object3D = videoEntity.object3D;
+        if (object3D) {
+          const updateSmoothing = () => {
+            const currentPosition = object3D.position.clone();
+            const currentRotation = object3D.rotation.clone();
+
+            lastPosition.lerp(currentPosition, smoothingFactor);
+            lastRotation.slerp(currentRotation, smoothingFactor);
+
+            object3D.position.copy(lastPosition);
+            object3D.rotation.copy(lastRotation);
+
+            requestAnimationFrame(updateSmoothing);
+          };
+          updateSmoothing();
+        }
       });
     });
   </script>
 </head>
 <body>
   <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind;"
+    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
     vr-mode-ui="enabled: false"
     device-orientation-permission-ui="enabled: false"
   >
@@ -52,3 +84,4 @@
     </a-entity>
   </a-scene>
 </body>
+
