@@ -58,16 +58,16 @@
         }
       });
 
-      // Function to start video playback
-      function startVideo() {
-        if (!video.paused) {
-          video.play();
-        }
+      // Check if the user has previously interacted with media on the site
+      if ('mediaSession' in navigator) {
+        navigator.mediaSession.getUserMedia().then(() => {
+          video.play().catch(error => {
+            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+          });
+        }).catch(error => {
+          console.error('Unable to access media devices. Autoplay will require user interaction.', error);
+        });
       }
-
-      // Optional: You can style this button however you like
-      const startButton = document.getElementById('startButton');
-      startButton.addEventListener('click', startVideo);
     });
   </script>
 </head>
@@ -99,9 +99,5 @@
         gesture-handler
       ></a-video>
     </a-entity>
-
-    <!-- Button to start video -->
-    <button id="startButton">Start Video</button>
   </a-scene>
 </body>
-
