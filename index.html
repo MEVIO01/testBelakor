@@ -5,8 +5,8 @@
     document.addEventListener("DOMContentLoaded", () => {
       const video = document.getElementById("vid");
 
-      const playButton = document.getElementById("playButton");
-      playButton.addEventListener("click", () => {
+      video.addEventListener("canplay", () => {
+        console.log("Video can play");
         video.muted = false;
         video.play();
       });
@@ -83,6 +83,5 @@
       ></a-video>
     </a-entity>
   </a-scene>
-  <button id="playButton">Play with Sound</button>
 </body>
 
