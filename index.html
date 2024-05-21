@@ -58,16 +58,12 @@
         }
       });
 
-      // Check if the user has previously interacted with media on the site
-      if ('mediaSession' in navigator) {
-        navigator.mediaSession.getUserMedia().then(() => {
-          video.play().catch(error => {
-            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
-          });
-        }).catch(error => {
-          console.error('Unable to access media devices. Autoplay will require user interaction.', error);
-        });
-      }
+      // Handle autoplay for sound in different browsers
+      document.addEventListener('click', () => {
+        if (video.paused) {
+          video.play();
+        }
+      });
     });
   </script>
 </head>
@@ -87,6 +83,7 @@
         crossorigin
         webkit-playsinline
         playsinline
+        autoplay
       ></video>
     </a-assets>
     <a-entity mindar-image-target="targetIndex: 0">
@@ -101,3 +98,4 @@
     </a-entity>
   </a-scene>
 </body>
+
