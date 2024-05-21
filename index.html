@@ -22,7 +22,9 @@
 
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
-        video.play();
+        if (!video.paused) {
+          video.play();
+        }
       });
 
       sceneEl.addEventListener('targetLost', (event) => {
@@ -49,6 +51,10 @@
           updateSmoothing();
         }
       });
+
+      // Play video with sound from the beginning
+      video.muted = false; // Ensure the video is not muted
+      video.play();
     });
   </script>
 </head>
@@ -83,4 +89,3 @@
     </a-entity>
   </a-scene>
 </body>
-
