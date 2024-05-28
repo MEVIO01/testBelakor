@@ -123,13 +123,14 @@
       const smoothingFactor = 0.1;
       let lastPosition = new THREE.Vector3();
       let lastRotation = new THREE.Euler();
+      let targetDetected = false;
 
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
         if (!video.paused) {
           video.play();
         }
-        videoPlane.object3D.visible = true; // Show video plane on target found
+        targetDetected = true;
       });
 
       sceneEl.addEventListener('targetLost', (event) => {
@@ -137,6 +138,7 @@
         video.pause();
         video.currentTime = 0;
         playButton.classList.remove("hidden");
+        targetDetected = false;
         videoPlane.object3D.visible = false; // Hide video plane on target lost
       });
 
@@ -158,6 +160,11 @@
           updateSmoothing();
         }
       });
+
+      // Show or hide video plane based on target detection
+      setInterval(() => {
+        videoPlane.object3D.visible = targetDetected && !video.paused;
+      }, 500); // Adjust this interval as needed
 
       document.addEventListener('click', () => {
         if (video.paused) {
