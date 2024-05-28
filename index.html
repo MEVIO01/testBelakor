@@ -1,6 +1,10 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Video with Blurred Edges</title>
   <style>
-    /* Style for the play button */
     .play-button {
       position: fixed;
       top: 50%;
@@ -53,26 +57,16 @@
           }
         `;
 
-  const fragmentShader = `
-  varying vec2 vUv;
-  uniform sampler2D map;
-  uniform float blurAmount;
-  void main() {
-    vec4 sum = vec4(0.0);
-    float blurSize = ${blurSize.toFixed(1)}; // Adjust blur size as needed
-    float density = 10.0; // Adjust density as needed
-    float exposure = 1.0; // Adjust exposure as needed
-    
-    for (float t = -30.0; t <= 30.0; t++) {
-      float percent = (t + 30.0) / 60.0;
-      float weight = 4.0 * (percent - percent * percent);
-      sum += texture2D(map, vUv + vec2(t * blurSize * density, 0.0)) * weight;
-    }
-
-    gl_FragColor = sum * exposure;
-  }
-`;
-
+        const fragmentShader = `
+          varying vec2 vUv;
+          uniform sampler2D map;
+          void main() {
+            vec4 color = texture2D(map, vUv);
+            float edge = smoothstep(0.0, 0.1, vUv.x) * smoothstep(0.9, 1.0, vUv.x) * smoothstep(0.0, 0.1, vUv.y) * smoothstep(0.9, 1.0, vUv.y);
+            color.a *= edge;
+            gl_FragColor = color;
+          }
+        `;
 
         mesh.material = new THREE.ShaderMaterial({
           uniforms: {
@@ -110,7 +104,7 @@
       });
 
       const sceneEl = document.querySelector('a-scene');
-      const videoEntity = document.querySelector('a-video');
+      const videoEntity = document.querySelector('a-plane');
       const smoothingFactor = 0.1;
       let lastPosition = new THREE.Vector3();
       let lastRotation = new THREE.Euler();
@@ -181,3 +175,4 @@
   <!-- Play button -->
   <div id="playButton" class="play-button"></div>
 </body>
+</html>
