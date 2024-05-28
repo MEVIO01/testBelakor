@@ -125,6 +125,7 @@
         if (!video.paused) {
           video.play();
         }
+        videoEntity.object3D.visible = true; // Show video plane on target found
       });
 
       sceneEl.addEventListener('targetLost', (event) => {
@@ -132,6 +133,7 @@
         video.pause();
         video.currentTime = 0;
         playButton.classList.remove("hidden");
+        videoEntity.object3D.visible = false; // Hide video plane on target lost
       });
 
       sceneEl.addEventListener('object3dset', (event) => {
