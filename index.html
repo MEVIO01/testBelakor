@@ -29,10 +29,6 @@
     .hidden {
       display: none;
     }
-
-    .blurred-video {
-      filter: blur(10px);
-    }
   </style>
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
@@ -57,14 +53,26 @@
           }
         `;
 
-        const fragmentShader = `
-          varying vec2 vUv;
-          uniform sampler2D map;
-          void main() {
-            vec4 color = texture2D(map, vUv);
-            gl_FragColor = color;
-          }
-        `;
+  const fragmentShader = `
+  varying vec2 vUv;
+  uniform sampler2D map;
+  uniform float blurAmount;
+  void main() {
+    vec4 sum = vec4(0.0);
+    float blurSize = ${blurSize.toFixed(1)}; // Adjust blur size as needed
+    float density = 10.0; // Adjust density as needed
+    float exposure = 1.0; // Adjust exposure as needed
+    
+    for (float t = -30.0; t <= 30.0; t++) {
+      float percent = (t + 30.0) / 60.0;
+      float weight = 4.0 * (percent - percent * percent);
+      sum += texture2D(map, vUv + vec2(t * blurSize * density, 0.0)) * weight;
+    }
+
+    gl_FragColor = sum * exposure;
+  }
+`;
+
 
         mesh.material = new THREE.ShaderMaterial({
           uniforms: {
