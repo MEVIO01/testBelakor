@@ -1,10 +1,10 @@
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tween.js@18.6.4"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Video with Blurred Edges</title>
   <style>
-    /* Style for the play button */
     .play-button {
       position: fixed;
       top: 50%;
@@ -34,105 +34,48 @@
       display: none;
     }
   </style>
-</head>
-<body>
-  <a-scene
-    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
-    vr-mode-ui="enabled: false"
-    device-orientation-permission-ui="enabled: false"
-  >
-    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-    <a-assets>
-      <video
-        id="vid"
-        src="assets/asset.mp4"
-        preload="auto"
-        loop
-        crossorigin
-        webkit-playsinline
-        playsinline
-      ></video>
-    </a-assets>
-    <a-entity mindar-image-target="targetIndex: 0">
-      <a-plane width="1" height="1" position="0 0.5 0" rotation="0 0 0" material="shader: blur; src: #vid;"></a-plane>
-    </a-entity>
-  </a-scene>
-  <!-- Play button -->
-  <div id="playButton" class="play-button"></div>
-
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
   <script>
-    AFRAME.registerComponent('blur', {
-      schema: {
-        src: { type: 'selector' }
-      },
-
+    AFRAME.registerComponent('blur-video', {
+      schema: { type: 'selector' },
       init: function () {
-        const data = this.data;
-        const el = this.el;
+        const videoEl = this.data;
+        const mesh = this.el.getObject3D('mesh');
 
-        // Create Three.js video texture
-        const texture = new THREE.VideoTexture(data.src);
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
+        videoEl.addEventListener('play', () => {
+          const videoTexture = new THREE.VideoTexture(videoEl);
+          mesh.material.map = videoTexture;
+          mesh.material.needsUpdate = true;
+        });
 
-        // Create shader material
-        const material = new THREE.ShaderMaterial({
+        const vertexShader = `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
+
+        const fragmentShader = `
+          varying vec2 vUv;
+          uniform sampler2D map;
+          void main() {
+            vec4 color = texture2D(map, vUv);
+            float edgeFactor = smoothstep(0.0, 0.05, vUv.x) * smoothstep(1.0, 0.95, vUv.x) * smoothstep(0.0, 0.05, vUv.y) * smoothstep(1.0, 0.95, vUv.y);
+            vec4 transparentColor = vec4(color.rgb, edgeFactor);
+            gl_FragColor = transparentColor;
+          }
+        `;
+
+        mesh.material = new THREE.ShaderMaterial({
           uniforms: {
-            tDiffuse: { value: texture },
-            resolution: { value: new THREE.Vector2() },
-            direction: { value: new THREE.Vector2() },
-            strength: { value: 0.1 }
+            map: { value: new THREE.VideoTexture(videoEl) }
           },
-          vertexShader: `
-            varying vec2 vUv;
-            void main() {
-              vUv = uv;
-              gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-            }
-          `,
-          fragmentShader: `
-            uniform sampler2D tDiffuse;
-            uniform vec2 resolution;
-            uniform vec2 direction;
-            uniform float strength;
-            varying vec2 vUv;
-
-            void main() {
-              vec4 sum = vec4(0.0);
-              vec2 offset = direction * strength;
-              
-              sum += texture2D(tDiffuse, vUv + offset * -4.0);
-              sum += texture2D(tDiffuse, vUv + offset * -3.0);
-              sum += texture2D(tDiffuse, vUv + offset * -2.0);
-              sum += texture2D(tDiffuse, vUv + offset * -1.0);
-              sum += texture2D(tDiffuse, vUv);
-              sum += texture2D(tDiffuse, vUv + offset * 1.0);
-              sum += texture2D(tDiffuse, vUv + offset * 2.0);
-              sum += texture2D(tDiffuse, vUv + offset * 3.0);
-              sum += texture2D(tDiffuse, vUv + offset * 4.0);
-              
-              gl_FragColor = sum / 9.0;
-            }
-          `,
+          vertexShader: vertexShader,
+          fragmentShader: fragmentShader,
           transparent: true
         });
-
-        // Set material to the entity
-        el.getObject3D('mesh').material = material;
-
-        // Set initial resolution value
-        material.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
-
-        // Handle window resize
-        window.addEventListener('resize', () => {
-          material.uniforms.resolution.value.set(window.innerWidth, window.innerHeight);
-        });
-      },
-
-      tick: function () {
-        // Update direction based on camera rotation for parallax effect
-        const direction = this.el.sceneEl.camera.getWorldDirection(new THREE.Vector3());
-        this.el.getObject3D('mesh').material.uniforms.direction.value = direction;
       }
     });
 
@@ -161,7 +104,7 @@
       });
 
       const sceneEl = document.querySelector('a-scene');
-      const videoEntity = document.querySelector('a-video');
+      const videoEntity = document.querySelector('a-plane');
       const smoothingFactor = 0.1;
       let lastPosition = new THREE.Vector3();
       let lastRotation = new THREE.Euler();
@@ -206,4 +149,30 @@
       });
     });
   </script>
+</head>
+<body>
+  <a-scene
+    mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
+    vr-mode-ui="enabled: false"
+    device-orientation-permission-ui="enabled: false"
+  >
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    <a-assets>
+      <video
+        id="vid"
+        src="assets/asset.mp4"
+        preload="auto"
+        loop
+        crossorigin
+        webkit-playsinline
+        playsinline
+      ></video>
+    </a-assets>
+    <a-entity mindar-image-target="targetIndex: 0">
+      <a-plane width="1" height="1" position="0 0.5 0" rotation="0 0 0" blur-video="#vid"></a-plane>
+    </a-entity>
+  </a-scene>
+  <!-- Play button -->
+  <div id="playButton" class="play-button"></div>
 </body>
+</html>
