@@ -63,8 +63,8 @@
           void main() {
             vec4 color = texture2D(map, vUv);
             float edgeFactor = smoothstep(0.0, 0.05, vUv.x) * smoothstep(1.0, 0.95, vUv.x) * smoothstep(0.0, 0.05, vUv.y) * smoothstep(1.0, 0.95, vUv.y);
-            vec4 blurredColor = vec4(0.0, 0.0, 0.0, 1.0); // Black blur color
-            gl_FragColor = mix(blurredColor, color, edgeFactor);
+            vec4 transparentColor = vec4(color.rgb, edgeFactor);
+            gl_FragColor = transparentColor;
           }
         `;
 
