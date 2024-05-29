@@ -119,6 +119,7 @@
       video.muted = false;
 
       let targetDetected = false;
+      let videoPlaying = false;
 
       video.addEventListener("canplay", () => {
         console.log("Video can play");
@@ -149,7 +150,9 @@
         if (!video.paused) {
           video.play();
         }
-        playButton.style.display = "none"; // Hide play button when target is found
+        if (!videoPlaying) {
+          playButton.style.display = "block"; // Show play button when target is found
+        }
       });
 
       sceneEl.addEventListener('targetLost', (event) => {
@@ -199,6 +202,15 @@
       sceneEl.addEventListener('loaded', () => {
         document.body.style.background = 'none';
         arScene.style.display = 'block';
+      });
+
+      // Event listener for video play and pause
+      video.addEventListener('play', () => {
+        videoPlaying = true;
+      });
+
+      video.addEventListener('pause', () => {
+        videoPlaying = false;
       });
     });
   </script>
