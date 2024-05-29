@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Video with Blurred Edges</title>
+  <title>AR Video with Blurred Edges and Scanning Animation</title>
   <style>
     .play-button {
       position: fixed;
@@ -35,6 +35,47 @@
     }
 
     a-plane {
+      display: none;
+    }
+
+    .scanner {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 200px;
+      height: 200px;
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+      overflow: hidden;
+      z-index: 500;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .scanner .line {
+      width: 100%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.7);
+      position: absolute;
+      top: 0;
+      animation: scan 2s infinite;
+    }
+
+    @keyframes scan {
+      0% {
+        top: 0;
+      }
+      50% {
+        top: 100%;
+      }
+      100% {
+        top: 0;
+      }
+    }
+
+    .hidden-scanner {
       display: none;
     }
   </style>
@@ -98,6 +139,7 @@
       const video = document.getElementById("vid");
       const playButton = document.getElementById("playButton");
       const videoPlane = document.querySelector('a-plane');
+      const scanner = document.getElementById("scanner");
 
       video.muted = false;
 
@@ -131,6 +173,7 @@
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
         targetDetected = true;
+        scanner.classList.add("hidden-scanner");
         if (!video.paused) {
           video.play();
         }
@@ -143,6 +186,7 @@
         playButton.classList.remove("hidden");
         targetDetected = false;
         videoPlane.object3D.visible = false; // Hide video plane on target lost
+        scanner.classList.remove("hidden-scanner");
       });
 
       sceneEl.addEventListener('object3dset', (event) => {
@@ -201,5 +245,9 @@
   </a-scene>
   <!-- Play button -->
   <div id="playButton" class="play-button"></div>
+  <!-- Scanner animation -->
+  <div id="scanner" class="scanner">
+    <div class="line"></div>
+  </div>
 </body>
 </html>
