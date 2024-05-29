@@ -3,14 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Video with Blurred Edges</title>
   <style>
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background: url('assets/mainbackground.png') no-repeat center center fixed;
-      background-size: cover;
-    }
     .play-button {
       position: fixed;
       top: 50%;
@@ -26,6 +20,7 @@
       cursor: pointer;
       z-index: 1000;
     }
+
     .play-button::before {
       content: '';
       width: 0;
@@ -34,9 +29,11 @@
       border-width: 15px 0 15px 25px;
       border-color: transparent transparent transparent white;
     }
+
     .hidden {
       display: none;
     }
+
     a-plane {
       display: none;
     }
@@ -101,11 +98,11 @@
       const video = document.getElementById("vid");
       const playButton = document.getElementById("playButton");
       const videoPlane = document.querySelector('a-plane');
+      const scannerAnimation = document.querySelector('.existing-scanner-animation'); // Adjust this selector based on the existing scanning animation's class or ID
 
       video.muted = false;
 
       let targetDetected = false;
-      let cameraAccessGranted = false;
 
       video.addEventListener("canplay", () => {
         console.log("Video can play");
@@ -135,6 +132,9 @@
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
         targetDetected = true;
+        if (scannerAnimation) {
+          scannerAnimation.style.display = 'none';
+        }
         if (!video.paused) {
           video.play();
         }
@@ -147,6 +147,9 @@
         playButton.classList.remove("hidden");
         targetDetected = false;
         videoPlane.object3D.visible = false; // Hide video plane on target lost
+        if (scannerAnimation) {
+          scannerAnimation.style.display = 'block';
+        }
       });
 
       sceneEl.addEventListener('object3dset', (event) => {
@@ -165,13 +168,6 @@
             requestAnimationFrame(updateSmoothing);
           };
           updateSmoothing();
-        }
-      });
-
-      sceneEl.addEventListener('loaded', (event) => {
-        cameraAccessGranted = true;
-        if (targetDetected) {
-          playButton.classList.remove("hidden");
         }
       });
 
@@ -211,6 +207,8 @@
     </a-entity>
   </a-scene>
   <!-- Play button -->
-  <div id="playButton" class="play-button hidden"></div>
+  <div id="playButton" class="play-button"></div>
+  <!-- Existing Scanner Animation -->
+  <div class="existing-scanner-animation"></div>
 </body>
 </html>
