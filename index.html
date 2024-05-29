@@ -101,6 +101,8 @@
 
       video.muted = false;
 
+      let targetDetected = false;
+
       video.addEventListener("canplay", () => {
         console.log("Video can play");
         video.play().catch(error => {
@@ -113,24 +115,25 @@
       });
 
       playButton.addEventListener("click", () => {
-        playButton.classList.add("hidden");
-        video.play().catch(error => {
-          console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
-        });
+        if (targetDetected) {
+          playButton.classList.add("hidden");
+          video.play().catch(error => {
+            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+          });
+        }
       });
 
       const sceneEl = document.querySelector('a-scene');
       const smoothingFactor = 0.1;
       let lastPosition = new THREE.Vector3();
       let lastRotation = new THREE.Euler();
-      let targetDetected = false;
 
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
+        targetDetected = true;
         if (!video.paused) {
           video.play();
         }
-        targetDetected = true;
       });
 
       sceneEl.addEventListener('targetLost', (event) => {
@@ -167,7 +170,7 @@
       }, 500); // Adjust this interval as needed
 
       document.addEventListener('click', () => {
-        if (video.paused) {
+        if (targetDetected && video.paused) {
           video.play();
         }
       });
