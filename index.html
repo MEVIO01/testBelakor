@@ -187,6 +187,11 @@
           video.play();
         }
       });
+
+      // Remove background once the AR scene is ready
+      sceneEl.addEventListener('loaded', () => {
+        document.body.style.background = 'none';
+      });
     });
   </script>
 </head>
