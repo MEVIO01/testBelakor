@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Video with Blurred Edges</title>
   <style>
     body, html {
       margin: 0;
@@ -33,10 +34,10 @@
       width: 0;
       height: 0;
       border-style: solid;
-      border-width: 20px 0 20px 40px; /* Adjusted size of the triangle */
+      border-width: 15px 0 15px 25px; /* Adjusted size of the triangle */
       border-color: transparent transparent transparent rgba(255, 255, 255, 0.7); /* Transparent white color */
-      transform: translateX(5px); /* Move the triangle slightly to the right to center it */
       position: absolute;
+      transform: translate(8px, 0); /* Adjusted to center the triangle within the circle */
     }
 
     .scanner {
@@ -192,7 +193,6 @@
         console.log('Target lost');
         video.pause();
         video.currentTime = 0;
-        playButton
         playButton.style.display = "block"; // Show play button when target is lost
         scanner.style.display = "block"; // Show scanner when target is lost
         targetDetected = false;
@@ -269,7 +269,7 @@
           playsinline
         ></video>
       </a-assets>
-      <a-entity mindar-image-target="targetIndex: 0">
+            <a-entity mindar-image-target="targetIndex: 0">
         <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
       </a-entity>
     </a-scene>
@@ -280,3 +280,4 @@
   <div id="scanner" class="scanner"></div>
 </body>
 </html>
+
