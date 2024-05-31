@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Scanning and Video Playback</title>
   <style>
     body, html {
       margin: 0;
@@ -12,6 +13,50 @@
       overflow: hidden;
       background: url('assets/mainbackground.png') no-repeat center center fixed;
       background-size: cover;
+    }
+
+    #ar-scene {
+      display: none;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .scanning-area {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-color: rgba(0, 0, 0, 0.5); /* Optional: add a semi-transparent background */
+    }
+
+    .scanner {
+      width: 200px;
+      height: 200px;
+      border: 5px solid rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.1);
+        opacity: 0.7;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
 
     .play-button {
@@ -37,19 +82,6 @@
       border-color: transparent transparent transparent rgba(255, 255, 255, 0.7); /* Transparent white color */
       transform: translateX(5px); /* Move the triangle slightly to the right to center it */
       position: absolute;
-    }
-
-    a-plane {
-      visibility: hidden;
-    }
-
-    #ar-scene {
-      display: none;
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
     }
   </style>
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -115,6 +147,7 @@
       const playButton = document.getElementById("playButton");
       const videoPlane = document.querySelector('a-plane');
       const arScene = document.getElementById("ar-scene");
+      const scanningArea = document.getElementById("scanning-area");
 
       video.muted = false;
 
@@ -132,6 +165,7 @@
       playButton.addEventListener("click", () => {
         if (targetDetected) {
           playButton.style.display = "none";
+          scanningArea.style.display = "none"; // Hide scanning area when video is played
           videoPlane.setAttribute('visible', true);
           video.play().catch(error => {
             console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
@@ -147,11 +181,10 @@
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
         targetDetected = true;
+        scanningArea.style.display = "none"; // Hide scanning area when target is found
+        playButton.style.display = "block"; // Show play button when target is found
         if (!video.paused) {
           video.play();
-        }
-        if (!videoPlaying) {
-          playButton.style.display = "block"; // Show play button when target is found
         }
       });
 
@@ -159,7 +192,8 @@
         console.log('Target lost');
         video.pause();
         video.currentTime = 0;
-        playButton.style.display = "block"; // Show play button when target is lost
+        playButton.style.display = "none"; // Hide play button when target is lost
+        scanningArea.style.display = "flex"; // Show scanning area when target is lost
         targetDetected = false;
         videoPlane.setAttribute('visible', false); // Hide video plane on target lost
       });
@@ -238,6 +272,10 @@
         <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
       </a-entity>
     </a-scene>
+  </div>
+  <!-- Scanning area animation -->
+  <div id="scanning-area" class="scanning-area">
+    <div class="scanner"></div>
   </div>
   <!-- Play button -->
   <div id="playButton" class="play-button"></div>
