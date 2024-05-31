@@ -24,7 +24,7 @@
       height: 60px;
       background-color: rgba(0, 0, 0, 0.7);
       border-radius: 50%;
-      display: none; /* Initially hide the play button */
+      display: flex;
       justify-content: center;
       align-items: center;
       cursor: pointer;
@@ -38,6 +38,10 @@
       border-style: solid;
       border-width: 15px 0 15px 25px;
       border-color: transparent transparent transparent white;
+    }
+
+    .hidden {
+      display: none;
     }
 
     a-plane {
@@ -120,7 +124,6 @@
       video.muted = false;
 
       let targetDetected = false;
-      let videoPlaying = false;
 
       video.addEventListener("canplay", () => {
         console.log("Video can play");
@@ -132,7 +135,7 @@
 
       playButton.addEventListener("click", () => {
         if (targetDetected) {
-          playButton.style.display = "none";
+          playButton.classList.add("hidden");
           videoPlane.setAttribute('visible', true);
           video.play().catch(error => {
             console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
@@ -151,16 +154,13 @@
         if (!video.paused) {
           video.play();
         }
-        if (!videoPlaying) {
-          playButton.style.display = "block"; // Show play button when target is found
-        }
       });
 
       sceneEl.addEventListener('targetLost', (event) => {
         console.log('Target lost');
         video.pause();
         video.currentTime = 0;
-        playButton.style.display = "block"; // Show play button when target is lost
+        playButton.classList.remove("hidden");
         targetDetected = false;
         videoPlane.setAttribute('visible', false); // Hide video plane on target lost
       });
@@ -203,15 +203,6 @@
       sceneEl.addEventListener('loaded', () => {
         document.body.style.background = 'none';
         arScene.style.display = 'block';
-      });
-
-      // Event listener for video play and pause
-      video.addEventListener('play', () => {
-        videoPlaying = true;
-      });
-
-      video.addEventListener('pause', () => {
-        videoPlaying = false;
       });
     });
   </script>
