@@ -11,7 +11,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: url('assets/mainbackground.jpg') no-repeat center center fixed;
+      background: url('assets/mainbackground.png') no-repeat center center fixed;
       background-size: cover;
     }
 
@@ -20,13 +20,16 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 60px;
-      height: 60px;
+      width: 80px;
+      height: 80px;
+      border: 5px solid rgba(255, 255, 255, 0.7);
+      border-radius: 50%;
       display: none;
       justify-content: center;
       align-items: center;
       cursor: pointer;
       z-index: 1000;
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       animation: pulse 1.5s infinite;
     }
 
@@ -38,8 +41,6 @@
       border-width: 20px 0 20px 35px;
       border-color: transparent transparent transparent rgba(255, 255, 255, 0.7);
       position: absolute;
-      left: 50%;
-      transform: translate(-50%, -50%);
     }
 
     .scanner {
@@ -59,15 +60,15 @@
 
     @keyframes pulse {
       0% {
-        transform: scale(1) translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1);
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       }
       50% {
-        transform: scale(1.1) translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1.1);
         box-shadow: 0 0 30px rgba(255, 255, 255, 0.7);
       }
       100% {
-        transform: scale(1) translate(-50%, -50%);
+        transform: translate(-50%, -50%) scale(1);
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       }
     }
@@ -267,8 +268,7 @@
           preload="auto"
           loop
           crossorigin
-          webkit-plays
-          inline
+          webkit-playsinline
           playsinline
         ></video>
       </a-assets>
@@ -277,9 +277,28 @@
       </a-entity>
     </a-scene>
   </div>
+  
   <!-- Play button -->
-  <div id="playButton" class="play-button"></div>
+  <div id="playButton" class="play-button">
+    <div class="triangle"></div>
+  </div>
+  
   <!-- Scanner -->
   <div id="scanner" class="scanner"></div>
+
+  <style>
+    .triangle {
+      width: 0;
+      height: 0;
+      border-left: 20px solid transparent;
+      border-right: 20px solid transparent;
+      border-bottom: 30px solid rgba(255, 255, 255, 0.7);
+      position: absolute;
+      top: calc(50% - 15px);
+      left: calc(50% - 20px);
+      transform: rotate(180deg);
+    }
+  </style>
 </body>
 </html>
+
