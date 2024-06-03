@@ -38,7 +38,7 @@
       border-color: transparent transparent transparent rgba(255, 255, 255, 0.7);
       position: absolute;
       left: 50%;
-      transform: translate(-50%, 0); /* Center the triangle within the circle */
+      transform: translate(-50%, -50%); /* Center the triangle within the circle */
     }
 
     .scanner {
@@ -58,15 +58,15 @@
 
     @keyframes pulse {
       0% {
-        transform: scale(1);
+        transform: scale(1) translate(-50%, -50%);
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       }
       50% {
-        transform: scale(1.1);
+        transform: scale(1.1) translate(-50%, -50%);
         box-shadow: 0 0 30px rgba(255, 255, 255, 0.7);
       }
       100% {
-        transform: scale(1);
+        transform: scale(1) translate(-50%, -50%);
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       }
     }
@@ -186,7 +186,7 @@
           video.play();
         }
         if (!videoPlaying) {
-          playButton.style.display = "block"; // Show play button when target is found
+          playButton.style.display = "flex"; // Show play button when target is found
         }
       });
 
@@ -194,7 +194,7 @@
         console.log('Target lost');
         video.pause();
         video.currentTime = 0;
-        playButton.style.display = "block"; // Show play button when target is lost
+        playButton.style.display = "flex"; // Show play button when target is lost
         scanner.style.display = "block"; // Show scanner when target is lost
         targetDetected = false;
         videoPlane.setAttribute('visible', false); // Hide video plane on target lost
@@ -266,11 +266,13 @@
           preload="auto"
           loop
           crossorigin
+          web
+          crossorigin
           webkit-playsinline
           playsinline
         ></video>
       </a-assets>
-           <a-entity mindar-image-target="targetIndex: 0">
+      <a-entity mindar-image-target="targetIndex: 0">
         <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
       </a-entity>
     </a-scene>
@@ -281,4 +283,3 @@
   <div id="scanner" class="scanner"></div>
 </body>
 </html>
-
