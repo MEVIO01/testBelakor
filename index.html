@@ -153,6 +153,7 @@
       const videoPlane = document.querySelector('a-plane');
       const arScene = document.getElementById("ar-scene");
       const scanner = document.getElementById("scanner");
+      const scanningOverlay = document.querySelector('.scanning');
 
       video.muted = false;
 
@@ -171,6 +172,9 @@
         if (targetDetected) {
           playButton.style.display = "none";
           scanner.style.display = "none";
+          if (scanningOverlay) {
+            scanningOverlay.style.display = "block";
+          }
           videoPlane.setAttribute('visible', true);
           video.play().catch(error => {
             console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
@@ -187,6 +191,9 @@
         console.log('Target found');
         targetDetected = true;
         scanner.style.display = "none";
+        if (scanningOverlay) {
+          scanningOverlay.style.display = "none";
+        }
         if (!video.paused) {
           video.play();
         }
@@ -288,5 +295,8 @@
   
   <!-- Scanner -->
   <div id="scanner" class="scanner"></div>
+  
+  <!-- Scanning Overlay -->
+  <div class="scanning"></div>
 </body>
 </html>
