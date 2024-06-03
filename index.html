@@ -41,21 +41,6 @@
       border-left: 20px solid rgba(255, 255, 255, 0.7);
     }
 
-    .scanner {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      border: 5px solid rgba(255, 255, 255, 0.7);
-      border-radius: 50%;
-      display: none;
-      z-index: 999;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-      animation: pulse 1.5s infinite;
-    }
-
     @keyframes pulse {
       0% {
         transform: translate(-50%, -50%) scale(1);
@@ -147,7 +132,6 @@
       const playButton = document.getElementById("playButton");
       const videoPlane = document.querySelector('a-plane');
       const arScene = document.getElementById("ar-scene");
-      const scanner = document.getElementById("scanner");
 
       video.muted = false;
 
@@ -165,7 +149,6 @@
       playButton.addEventListener("click", () => {
         if (targetDetected) {
           playButton.style.display = "none";
-          scanner.style.display = "none";
           videoPlane.setAttribute('visible', true);
           video.play().catch(error => {
             console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
@@ -181,12 +164,11 @@
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
         targetDetected = true;
-        scanner.style.display = "none";
         if (!video.paused) {
           video.play();
         }
         if (!videoPlaying) {
-          playButton.style.display = "flex"; // Show play button when target is found
+          playButton.style.display = 'flex'; // Show play button when target is found
         }
       });
 
@@ -194,8 +176,7 @@
         console.log('Target lost');
         video.pause();
         video.currentTime = 0;
-        playButton.style.display = "flex"; // Show play button when target is lost
-        scanner.style.display = "block"; // Show scanner when target is lost
+        playButton.style.display = 'flex'; // Show play button when target is lost
         targetDetected = false;
         videoPlane.setAttribute('visible', false); // Hide video plane on target lost
       });
@@ -268,7 +249,7 @@
           crossorigin
           webkit-playsinline
           playsinline
-        ></        video>
+        ></video>
       </a-assets>
       <a-entity mindar-image-target="targetIndex: 0">
         <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
@@ -280,98 +261,6 @@
   <div id="playButton" class="play-button">
     <div class="triangle"></div>
   </div>
-  
-  <!-- Scanner -->
-  <div id="scanner" class="scanner"></div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const playButton = document.getElementById("playButton");
-      const scanner = document.getElementById("scanner");
-
-      // Function to make the play button slide up and down
-      function animatePlayButton() {
-        const button = document.querySelector('.play-button');
-        const originalPosition = button.style.top;
-        button.style.animation = 'none';
-        button.offsetHeight; /* trigger reflow */
-        button.style.animation = null;
-
-        button.style.top = originalPosition;
-
-        button.classList.add('animate');
-        setTimeout(() => {
-          button.classList.remove('animate');
-        }, 1000);
-      }
-
-      // Set up the play button animation on load
-      animatePlayButton();
-
-      const sceneEl = document.querySelector('a-scene');
-      const playButton = document.getElementById('playButton');
-      const scanner = document.getElementById('scanner');
-      const videoPlane = document.querySelector('a-plane');
-      const video = document.getElementById('vid');
-      let targetDetected = false;
-      let videoPlaying = false;
-
-      video.muted = true;
-
-      // Event listener for when target is found
-      sceneEl.addEventListener('targetFound', (event) => {
-        console.log('Target found');
-        targetDetected = true;
-        scanner.style.display = 'none';
-        if (!video.paused) {
-          video.play();
-        }
-        if (!videoPlaying) {
-          playButton.style.display = 'flex';
-          animatePlayButton();
-        }
-      });
-
-      // Event listener for when target is lost
-      sceneEl.addEventListener('targetLost', (event) => {
-        console.log('Target lost');
-        video.pause();
-        video.currentTime = 0;
-        playButton.style.display = 'flex';
-        scanner.style.display = 'block';
-        targetDetected = false;
-        videoPlane.setAttribute('visible', false);
-      });
-
-      // Event listener for video play
-      video.addEventListener('play', () => {
-        videoPlaying = true;
-      });
-
-      // Event listener for video pause
-      video.addEventListener('pause', () => {
-        videoPlaying = false;
-      });
-
-      // Click event listener for play button
-      playButton.addEventListener('click', () => {
-        if (targetDetected) {
-          playButton.style.display = 'none';
-          scanner.style.display = 'none';
-          videoPlane.setAttribute('visible', true);
-          video.play().catch(error => {
-            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
-          });
-        }
-      });
-
-      // Remove background and show AR scene once the AR scene is ready
-      sceneEl.addEventListener('loaded', () => {
-        document.body.style.background = 'none';
-        arScene.style.display = 'block';
-      });
-    });
-  </script>
 </body>
 </html>
-
