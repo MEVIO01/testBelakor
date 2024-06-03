@@ -41,21 +41,6 @@
       border-left: 20px solid rgba(255, 255, 255, 0.7);
     }
 
-    .scanner {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      border: 5px solid rgba(255, 255, 255, 0.7);
-      border-radius: 50%;
-      display: none;
-      z-index: 999;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-      animation: pulse 1.5s infinite;
-    }
-
     @keyframes pulse {
       0% {
         transform: translate(-50%, -50%) scale(1);
@@ -147,7 +132,6 @@
       const playButton = document.getElementById("playButton");
       const videoPlane = document.querySelector('a-plane');
       const arScene = document.getElementById("ar-scene");
-      const scanner = document.getElementById("scanner");
 
       video.muted = false;
 
@@ -165,7 +149,6 @@
       playButton.addEventListener("click", () => {
         if (targetDetected) {
           playButton.style.display = "none";
-          scanner.style.display = "none";
           videoPlane.setAttribute('visible', true);
           video.play().catch(error => {
             console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
@@ -181,7 +164,6 @@
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
         targetDetected = true;
-        scanner.style.display = "none";
         if (!video.paused) {
           video.play();
         }
@@ -195,7 +177,6 @@
         video.pause();
         video.currentTime = 0;
         playButton.style.display = "flex"; // Show play button when target is lost
-        scanner.style.display = "block"; // Show scanner when target is lost
         targetDetected = false;
         videoPlane.setAttribute('visible', false); // Hide video plane on target lost
       });
@@ -280,8 +261,5 @@
   <div id="playButton" class="play-button">
     <div class="triangle"></div>
   </div>
-  
-  <!-- Scanner -->
-  <div id="scanner" class="scanner"></div>
 </body>
 </html>
