@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AR Video with Blurred Edges</title>
   <style>
     body, html {
       margin: 0;
@@ -19,9 +20,9 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 80px; /* Adjusted width for smaller triangle */
-      height: 80px; /* Adjusted height for smaller triangle */
-      display: none; /* Initially hide the play button */
+      width: 60px;
+      height: 60px;
+      display: none;
       justify-content: center;
       align-items: center;
       cursor: pointer;
@@ -33,10 +34,11 @@
       width: 0;
       height: 0;
       border-style: solid;
-      border-width: 10px 0 10px 17.3px; /* Adjusted size of the triangle */
-      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7); /* Transparent white color */
+      border-width: 15px 0 15px 25px;
+      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7);
       position: absolute;
-      transform: translate(10px, 0); /* Adjusted to center the triangle within the circle */
+      left: 50%;
+      transform: translate(-50%, 0); /* Center the triangle within the circle */
     }
 
     .scanner {
@@ -48,7 +50,7 @@
       height: 200px;
       border: 5px solid rgba(255, 255, 255, 0.7);
       border-radius: 50%;
-      display: none; /* Initially hide the scanner */
+      display: none;
       z-index: 999;
       box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       animation: pulse 1.5s infinite;
@@ -268,8 +270,8 @@
           playsinline
         ></video>
       </a-assets>
-      <a-entity mindar-image-target="targetIndex: 0">
-          <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
+           <a-entity mindar-image-target="targetIndex: 0">
+        <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
       </a-entity>
     </a-scene>
   </div>
