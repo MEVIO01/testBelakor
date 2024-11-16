@@ -144,42 +144,62 @@
       const loadingText = document.getElementById("loading-text");
       const cameraError = document.getElementById("camera-error");
       
-      // Initialize videos with muted state for autoplay
       const video1 = document.getElementById("vid1");
       const video2 = document.getElementById("vid2");
-      [video1, video2].forEach(video => {
-        video.muted = true;
-        video.playsInline = true;
-        video.load();
-      });
+      let videosLoaded = 0;
 
-      const playButton = document.getElementById("playButton");
-      const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
-      const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
+      const loadVideo = (video, src) => {
+        return new Promise((resolve, reject) => {
+          video.muted = true;
+          video.playsInline = true;
+          
+          video.addEventListener('loadeddata', () => {
+            videosLoaded++;
+            loadingText.innerHTML = `Loading videos: ${videosLoaded}/2`;
+            resolve();
+          }, { once: true });
+
+          video.addEventListener('error', (e) => {
+            reject(new Error(`Error loading video: ${e.message}`));
+          }, { once: true });
+
+          video.src = src;
+          video.load();
+        });
+      };
+
+      Promise.all([
+        loadVideo(video1, 'assets/asset.mp4'),
+        loadVideo(video2, 'assets/asset2.mp4')
+      ])
+      .then(() => {
+        loadingText.innerHTML = 'Checking camera access...';
+        return navigator.mediaDevices.getUserMedia({ video: true });
+      })
+      .then(stream => {
+        stream.getTracks().forEach(track => track.stop());
+        initAR();
+      })
+      .catch(err => {
+        console.error("Setup error:", err);
+        cameraError.style.display = "block";
+        loadingScreen.style.display = "none";
+      });
 
       let currentVideo = null;
       let currentPlane = null;
       let targetDetected = false;
       let videoPlaying = false;
 
-      // Check for camera access
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then(stream => {
-          stream.getTracks().forEach(track => track.stop());
-          initAR();
-        })
-        .catch(err => {
-          console.error("Camera access error:", err);
-          cameraError.style.display = "block";
-          loadingScreen.style.display = "none";
-        });
-
       function initAR() {
+        const playButton = document.getElementById("playButton");
+        const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
+        const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
         const sceneEl = document.querySelector('a-scene');
-        
+
         sceneEl.addEventListener('arReady', () => {
           console.log("AR System Ready");
-          loadingText.innerHTML = "AR System Ready<br>Looking for targets...";
+          loadingText.innerHTML = "Looking for targets...";
         });
 
         sceneEl.addEventListener('arError', (ev) => {
@@ -191,9 +211,8 @@
           if (targetDetected && currentVideo) {
             playButton.style.display = "none";
             currentPlane.setAttribute('visible', true);
-            
-            // Unmute and play
             currentVideo.muted = false;
+            
             const playPromise = currentVideo.play();
             if (playPromise) {
               playPromise.catch(error => {
@@ -287,24 +306,24 @@
       loading-screen="enabled: false"
     >
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <a-assets>
+      <a-assets timeout="30000">
         <video
           id="vid1"
-          src="assets/asset.mp4"
-          preload="none"
+          preload="metadata"
           playsinline
           webkit-playsinline
           crossorigin="anonymous"
           loop
+          muted
         ></video>
         <video
           id="vid2"
-          src="assets/asset2.mp4"
-          preload="none"
+          preload="metadata"
           playsinline
           webkit-playsinline
           crossorigin="anonymous"
           loop
+          muted
         ></video>
       </a-assets>
       
