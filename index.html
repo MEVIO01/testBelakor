@@ -59,17 +59,43 @@
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
   <script>
-    AFRAME.registerComponent('video-handler', {
-      init: function() {
+    AFRAME.registerComponent('transparent-video', {
+      init: function () {
+        const mesh = this.el.getObject3D('mesh');
         const videoEl = this.el.getAttribute('material').src;
-        const videoPlane = this.el;
 
-        videoEl.addEventListener('play', () => {
-          videoPlane.setAttribute('visible', true);
+        const vertexShader = `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
+
+        const fragmentShader = `
+          varying vec2 vUv;
+          uniform sampler2D map;
+          void main() {
+            vec4 color = texture2D(map, vUv);
+            float edgeFactor = smoothstep(0.0, 0.1, vUv.x) * smoothstep(1.0, 0.9, vUv.x) * 
+                             smoothstep(0.0, 0.1, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
+            gl_FragColor = vec4(color.rgb, color.a * edgeFactor);
+          }
+        `;
+
+        this.shaderMaterial = new THREE.ShaderMaterial({
+          uniforms: {
+            map: { value: null }
+          },
+          vertexShader: vertexShader,
+          fragmentShader: fragmentShader,
+          transparent: true
         });
 
-        videoEl.addEventListener('pause', () => {
-          videoPlane.setAttribute('visible', false);
+        videoEl.addEventListener('playing', () => {
+          const videoTexture = new THREE.VideoTexture(videoEl);
+          this.shaderMaterial.uniforms.map.value = videoTexture;
+          mesh.material = this.shaderMaterial;
         });
       }
     });
@@ -87,6 +113,7 @@
       let currentPlane = null;
       let targetDetected = false;
       let videoPlaying = false;
+      let firstPlay = true;
 
       const sceneEl = document.querySelector('a-scene');
       sceneEl.addEventListener('arReady', () => {
@@ -103,9 +130,18 @@
         if (targetDetected && currentVideo) {
           playButton.style.display = "none";
           currentPlane.setAttribute('visible', true);
-          currentVideo.play().catch(error => {
-            console.error('Autoplay was prevented:', error);
-          });
+          
+          const playPromise = currentVideo.play();
+          if (playPromise) {
+            playPromise.catch(error => {
+              if (firstPlay) {
+                firstPlay = false;
+                playButton.style.display = "block";
+              } else {
+                console.error('Playback failed:', error);
+              }
+            });
+          }
         }
       });
 
@@ -157,6 +193,7 @@
         video.addEventListener('play', () => {
           videoPlaying = true;
           pauseOtherVideos(video);
+          firstPlay = false;
         });
         video.addEventListener('pause', () => {
           if (currentVideo === video) {
@@ -198,24 +235,27 @@
         ></video>
       </a-assets>
       
+      <!-- Second video (vertical format) -->
       <a-entity mindar-image-target="targetIndex: 0" target-index="0">
         <a-plane 
-          width="1.2" 
-          height="1.2" 
+          width="0.8" 
+          height="1.4" 
           position="0 0 0" 
           rotation="0 0 0" 
-          material="src: #vid2; transparent: true; alphaTest: 0.5"
-          video-handler
+          material="src: #vid2; transparent: true"
+          transparent-video
         ></a-plane>
       </a-entity>
+      
+      <!-- First video (regular format) -->
       <a-entity mindar-image-target="targetIndex: 1" target-index="1">
         <a-plane 
-          width="2" 
-          height="2" 
+          width="1.4" 
+          height="1" 
           position="0 0 0" 
           rotation="0 0 0" 
-          material="src: #vid1; transparent: true; alphaTest: 0.5"
-          video-handler
+          material="src: #vid1; transparent: true"
+          transparent-video
         ></a-plane>
       </a-entity>
     </a-scene>
