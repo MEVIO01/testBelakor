@@ -98,11 +98,8 @@
       const video = document.getElementById("vid");
       const playButton = document.getElementById("playButton");
       const videoPlane = document.querySelector('a-plane');
-      const scannerAnimation = document.querySelector('.existing-scanner-animation'); // Adjust this selector based on the existing scanning animation's class or ID
 
       video.muted = false;
-
-      let targetDetected = false;
 
       video.addEventListener("canplay", () => {
         console.log("Video can play");
@@ -116,28 +113,24 @@
       });
 
       playButton.addEventListener("click", () => {
-        if (targetDetected) {
-          playButton.classList.add("hidden");
-          video.play().catch(error => {
-            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
-          });
-        }
+        playButton.classList.add("hidden");
+        video.play().catch(error => {
+          console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+        });
       });
 
       const sceneEl = document.querySelector('a-scene');
       const smoothingFactor = 0.1;
       let lastPosition = new THREE.Vector3();
       let lastRotation = new THREE.Euler();
+      let targetDetected = false;
 
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
-        targetDetected = true;
-        if (scannerAnimation) {
-          scannerAnimation.style.display = 'none';
-        }
         if (!video.paused) {
           video.play();
         }
+        targetDetected = true;
       });
 
       sceneEl.addEventListener('targetLost', (event) => {
@@ -147,9 +140,6 @@
         playButton.classList.remove("hidden");
         targetDetected = false;
         videoPlane.object3D.visible = false; // Hide video plane on target lost
-        if (scannerAnimation) {
-          scannerAnimation.style.display = 'block';
-        }
       });
 
       sceneEl.addEventListener('object3dset', (event) => {
@@ -177,7 +167,7 @@
       }, 500); // Adjust this interval as needed
 
       document.addEventListener('click', () => {
-        if (targetDetected && video.paused) {
+        if (video.paused) {
           video.play();
         }
       });
@@ -208,7 +198,5 @@
   </a-scene>
   <!-- Play button -->
   <div id="playButton" class="play-button"></div>
-  <!-- Existing Scanner Animation -->
-  <div class="existing-scanner-animation"></div>
 </body>
 </html>
