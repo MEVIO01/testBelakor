@@ -59,6 +59,36 @@
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
   <script>
+    // Register video scaling component
+    AFRAME.registerComponent('video-handler', {
+      init: function() {
+        const el = this.el;
+        const video = document.querySelector(el.getAttribute('material').src);
+        
+        // Wait for video metadata to load
+        video.addEventListener('loadedmetadata', () => {
+          const videoAspectRatio = video.videoWidth / video.videoHeight;
+          const baseScale = 1; // Base scale factor - adjust this value as needed
+          
+          // Calculate dimensions while maintaining aspect ratio
+          let width, height;
+          if (videoAspectRatio > 1) {
+            // Landscape video
+            width = baseScale;
+            height = baseScale / videoAspectRatio;
+          } else {
+            // Portrait video
+            width = baseScale * videoAspectRatio;
+            height = baseScale;
+          }
+          
+          // Update plane dimensions
+          el.setAttribute('width', width);
+          el.setAttribute('height', height);
+        });
+      }
+    });
+
     AFRAME.registerComponent('transparent-video', {
       init: function () {
         const mesh = this.el.getObject3D('mesh');
@@ -115,9 +145,21 @@
       let videoPlaying = false;
       let firstPlay = true;
 
+      // Enhanced target tracking setup
+      const targets = {
+        0: { video: video2, plane: videoPlane2, active: false },
+        1: { video: video1, plane: videoPlane1, active: false }
+      };
+
       const sceneEl = document.querySelector('a-scene');
+      
       sceneEl.addEventListener('arReady', () => {
+        console.log("AR system ready");
         loadingScreen.style.display = 'none';
+      });
+
+      sceneEl.addEventListener('arError', (ev) => {
+        console.error("AR error:", ev);
       });
 
       [video1, video2].forEach(video => {
@@ -134,70 +176,77 @@
           const playPromise = currentVideo.play();
           if (playPromise) {
             playPromise.catch(error => {
-              if (firstPlay) {
-                firstPlay = false;
-                playButton.style.display = "block";
-              } else {
-                console.error('Playback failed:', error);
-              }
+              console.error('Playback failed:', error);
+              playButton.style.display = "block";
             });
           }
         }
       });
 
       function pauseOtherVideos(currentVideoEl) {
-        [video1, video2].forEach(video => {
-          if (video !== currentVideoEl) {
-            video.pause();
-            video.currentTime = 0;
+        Object.values(targets).forEach(target => {
+          if (target.video !== currentVideoEl) {
+            target.video.pause();
+            target.video.currentTime = 0;
+            target.plane.setAttribute('visible', false);
           }
         });
       }
 
+      // Enhanced target tracking events
       [0, 1].forEach(targetIndex => {
         const targetEntity = document.querySelector(`a-entity[target-index="${targetIndex}"]`);
         
         targetEntity.addEventListener('targetFound', () => {
           console.log(`Target ${targetIndex} found`);
+          targets[targetIndex].active = true;
           targetDetected = true;
           
-          currentVideo = targetIndex === 0 ? video2 : video1;
-          currentPlane = targetIndex === 0 ? videoPlane2 : videoPlane1;
+          currentVideo = targets[targetIndex].video;
+          currentPlane = targets[targetIndex].plane;
           
           pauseOtherVideos(currentVideo);
           
           if (!videoPlaying) {
-            playButton.style.display = "block";
+            playButton.style.display = "flex";
           }
         });
 
         targetEntity.addEventListener('targetLost', () => {
           console.log(`Target ${targetIndex} lost`);
-          if (currentVideo === (targetIndex === 0 ? video2 : video1)) {
-            currentVideo.pause();
-            currentVideo.currentTime = 0;
-            playButton.style.display = "block";
+          targets[targetIndex].active = false;
+          
+          // Only pause if no other targets are active
+          if (!Object.values(targets).some(target => target.active)) {
+            if (currentVideo) {
+              currentVideo.pause();
+              currentVideo.currentTime = 0;
+            }
+            playButton.style.display = "none";
             targetDetected = false;
-            currentPlane.setAttribute('visible', false);
+            if (currentPlane) {
+              currentPlane.setAttribute('visible', false);
+            }
           }
         });
-      });
-
-      document.addEventListener('click', () => {
-        if (targetDetected && currentVideo && currentVideo.paused) {
-          currentVideo.play();
-        }
       });
 
       [video1, video2].forEach(video => {
         video.addEventListener('play', () => {
           videoPlaying = true;
           pauseOtherVideos(video);
-          firstPlay = false;
         });
+        
         video.addEventListener('pause', () => {
           if (currentVideo === video) {
             videoPlaying = false;
+          }
+        });
+
+        video.addEventListener('ended', () => {
+          if (currentVideo === video) {
+            videoPlaying = false;
+            playButton.style.display = "flex";
           }
         });
       });
@@ -210,6 +259,8 @@
   <div id="ar-scene">
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
+      color-space="sRGB"
+      renderer="colorManagement: true, physicallyCorrectLights"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
@@ -220,7 +271,7 @@
           src="assets/asset.mp4"
           preload="auto"
           loop
-          crossorigin
+          crossorigin="anonymous"
           webkit-playsinline
           playsinline
         ></video>
@@ -229,7 +280,7 @@
           src="assets/asset2.mp4"
           preload="auto"
           loop
-          crossorigin
+          crossorigin="anonymous"
           webkit-playsinline
           playsinline
         ></video>
@@ -238,24 +289,24 @@
       <!-- Second video (vertical format) -->
       <a-entity mindar-image-target="targetIndex: 0" target-index="0">
         <a-plane 
-          width="0.8" 
-          height="1.4" 
+          video-handler
           position="0 0 0" 
           rotation="0 0 0" 
           material="src: #vid2; transparent: true"
           transparent-video
+          visible="false"
         ></a-plane>
       </a-entity>
       
       <!-- First video (regular format) -->
       <a-entity mindar-image-target="targetIndex: 1" target-index="1">
         <a-plane 
-          width="1.4" 
-          height="1" 
+          video-handler
           position="0 0 0" 
           rotation="0 0 0" 
           material="src: #vid1; transparent: true"
           transparent-video
+          visible="false"
         ></a-plane>
       </a-entity>
     </a-scene>
