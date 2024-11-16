@@ -10,8 +10,22 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
+    }
+
+    body {
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
       background: url('assets/mainbackground.png') no-repeat center center fixed;
       background-size: cover;
+      z-index: 1;
     }
 
     .play-button {
@@ -47,9 +61,15 @@
       display: none;
       width: 100%;
       height: 100%;
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
+      z-index: 2;
+    }
+
+    /* Hide background when AR scene is active */
+    .ar-active body::before {
+      display: none;
     }
   </style>
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -112,7 +132,6 @@
     });
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Get references to both videos and their planes
       const video1 = document.getElementById("vid1");
       const video2 = document.getElementById("vid2");
       const playButton = document.getElementById("playButton");
@@ -125,7 +144,6 @@
       let targetDetected = false;
       let videoPlaying = false;
 
-      // Initialize videos
       [video1, video2].forEach(video => {
         video.muted = false;
         video.addEventListener("canplay", () => console.log("Video can play:", video.id));
@@ -147,7 +165,6 @@
       let lastPosition = new THREE.Vector3();
       let lastRotation = new THREE.Euler();
 
-      // Function to pause all videos except the current one
       function pauseOtherVideos(currentVideoEl) {
         [video1, video2].forEach(video => {
           if (video !== currentVideoEl) {
@@ -157,7 +174,6 @@
         });
       }
 
-      // Target detection handlers for both targets
       [0, 1].forEach(targetIndex => {
         const targetEntity = document.querySelector(`a-entity[target-index="${targetIndex}"]`);
         
@@ -165,7 +181,6 @@
           console.log(`Target ${targetIndex} found`);
           targetDetected = true;
           
-          // Set current video and plane based on target
           currentVideo = targetIndex === 0 ? video1 : video2;
           currentPlane = targetIndex === 0 ? videoPlane1 : videoPlane2;
           
@@ -191,7 +206,6 @@
         });
       });
 
-      // Position smoothing for both planes
       [videoPlane1, videoPlane2].forEach(plane => {
         const object3D = plane.object3D;
         if (object3D) {
@@ -211,20 +225,19 @@
         }
       });
 
-      // Document click handler
       document.addEventListener('click', () => {
         if (targetDetected && currentVideo && currentVideo.paused) {
           currentVideo.play();
         }
       });
 
-      // Scene loaded handler
+      // Modified scene loaded handler to properly handle background
       sceneEl.addEventListener('loaded', () => {
-        document.body.style.background = 'none';
         arScene.style.display = 'block';
+        // Add class to body when AR is active
+        document.body.classList.add('ar-active');
       });
 
-      // Video state handlers for both videos
       [video1, video2].forEach(video => {
         video.addEventListener('play', () => {
           videoPlaying = true;
