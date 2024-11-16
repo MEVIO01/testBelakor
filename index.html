@@ -65,8 +65,6 @@
         const videoId = el.getAttribute('material').src.substring(1);
         const video = document.getElementById(videoId);
         
-        if (!video) return;
-
         video.addEventListener('loadedmetadata', () => {
           const videoAspectRatio = video.videoWidth / video.videoHeight;
           const baseScale = 1;
@@ -89,9 +87,7 @@
     AFRAME.registerComponent('transparent-video', {
       init: function () {
         const mesh = this.el.getObject3D('mesh');
-        const videoEl = document.querySelector(this.el.getAttribute('material').src);
-
-        if (!videoEl) return;
+        const videoEl = this.el.getAttribute('material').src;
 
         const vertexShader = `
           varying vec2 vUv;
@@ -129,13 +125,13 @@
       }
     });
 
-    const startARExperience = () => {
-      const sceneEl = document.querySelector('a-scene');
+    document.addEventListener("DOMContentLoaded", () => {
       const video1 = document.getElementById("vid1");
       const video2 = document.getElementById("vid2");
       const playButton = document.getElementById("playButton");
       const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
       const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
+      const arScene = document.getElementById("ar-scene");
       const loadingScreen = document.getElementById("loading-screen");
 
       let currentVideo = null;
@@ -144,10 +140,10 @@
       let videoPlaying = false;
       let firstPlay = true;
 
-      const targets = {
-        0: { video: video2, plane: videoPlane2, active: false },
-        1: { video: video1, plane: videoPlane1, active: false }
-      };
+      const sceneEl = document.querySelector('a-scene');
+      sceneEl.addEventListener('arReady', () => {
+        loadingScreen.style.display = 'none';
+      });
 
       [video1, video2].forEach(video => {
         video.muted = false;
@@ -171,11 +167,10 @@
       });
 
       function pauseOtherVideos(currentVideoEl) {
-        Object.values(targets).forEach(target => {
-          if (target.video !== currentVideoEl) {
-            target.video.pause();
-            target.video.currentTime = 0;
-            target.plane.setAttribute('visible', false);
+        [video1, video2].forEach(video => {
+          if (video !== currentVideoEl) {
+            video.pause();
+            video.currentTime = 0;
           }
         });
       }
@@ -185,11 +180,10 @@
         
         targetEntity.addEventListener('targetFound', () => {
           console.log(`Target ${targetIndex} found`);
-          targets[targetIndex].active = true;
           targetDetected = true;
           
-          currentVideo = targets[targetIndex].video;
-          currentPlane = targets[targetIndex].plane;
+          currentVideo = targetIndex === 0 ? video2 : video1;
+          currentPlane = targetIndex === 0 ? videoPlane2 : videoPlane1;
           
           pauseOtherVideos(currentVideo);
           
@@ -200,18 +194,12 @@
 
         targetEntity.addEventListener('targetLost', () => {
           console.log(`Target ${targetIndex} lost`);
-          targets[targetIndex].active = false;
-          
-          if (!Object.values(targets).some(target => target.active)) {
-            if (currentVideo) {
-              currentVideo.pause();
-              currentVideo.currentTime = 0;
-            }
+          if (currentVideo === (targetIndex === 0 ? video2 : video1)) {
+            currentVideo.pause();
+            currentVideo.currentTime = 0;
             playButton.style.display = "none";
             targetDetected = false;
-            if (currentPlane) {
-              currentPlane.setAttribute('visible', false);
-            }
+            currentPlane.setAttribute('visible', false);
           }
         });
       });
@@ -235,23 +223,7 @@
           }
         });
       });
-
-      sceneEl.addEventListener('arReady', () => {
-        console.log("AR system ready");
-        loadingScreen.style.display = 'none';
-      });
-
-      sceneEl.addEventListener('arError', (ev) => {
-        console.error("AR error:", ev);
-      });
-    };
-
-    // Wait for AFRAME to be ready before starting
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', startARExperience);
-    } else {
-      startARExperience();
-    }
+    });
   </script>
 </head>
 <body>
@@ -259,8 +231,7 @@
 
   <div id="ar-scene">
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001; uiScanning: #scanning-overlay;"
-      embedded
+      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
