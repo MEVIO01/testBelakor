@@ -19,9 +19,9 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 80px; /* Adjusted width for smaller triangle */
-      height: 80px; /* Adjusted height for smaller triangle */
-      display: none; /* Initially hide the play button */
+      width: 80px;
+      height: 80px;
+      display: none;
       justify-content: center;
       align-items: center;
       cursor: pointer;
@@ -33,9 +33,9 @@
       width: 0;
       height: 0;
       border-style: solid;
-      border-width: 20px 0 20px 40px; /* Adjusted size of the triangle */
-      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7); /* Transparent white color */
-      transform: translateX(5px); /* Move the triangle slightly to the right to center it */
+      border-width: 20px 0 20px 40px;
+      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7);
+      transform: translateX(5px);
       position: absolute;
     }
 
@@ -60,18 +60,18 @@
       init: function () {
         const videoEl = this.data;
         const mesh = this.el.getObject3D('mesh');
+        const videoTexture = new THREE.VideoTexture(videoEl);
         let shaderEnabled = false;
 
         videoEl.addEventListener('play', () => {
-          const videoTexture = new THREE.VideoTexture(videoEl);
           mesh.material.map = videoTexture;
           mesh.material.needsUpdate = true;
-          this.el.setAttribute('visible', true);  // Show the plane when the video plays
+          this.el.setAttribute('visible', true);
           this.toggleShader(true);
         });
 
         videoEl.addEventListener('pause', () => {
-          this.el.setAttribute('visible', false);  // Hide the plane when the video pauses
+          this.el.setAttribute('visible', false);
           this.toggleShader(false);
         });
 
@@ -95,9 +95,7 @@
         `;
 
         mesh.material = new THREE.ShaderMaterial({
-          uniforms: {
-            map: { value: new THREE.VideoTexture(videoEl) }
-          },
+          uniforms: { map: { value: videoTexture } },
           vertexShader: vertexShader,
           fragmentShader: fragmentShader,
           transparent: true
@@ -111,107 +109,74 @@
     });
 
     document.addEventListener("DOMContentLoaded", () => {
-      const video = document.getElementById("vid");
       const playButton = document.getElementById("playButton");
-      const videoPlane = document.querySelector('a-plane');
-      const arScene = document.getElementById("ar-scene");
-
-      video.muted = false;
 
       let targetDetected = false;
       let videoPlaying = false;
 
-      video.addEventListener("canplay", () => {
-        console.log("Video can play");
-      });
-
-      video.addEventListener("error", (e) => {
-        console.error("Error loading video:", e);
-      });
-
-      playButton.addEventListener("click", () => {
+      const handlePlayButtonClick = (video, videoPlane) => {
         if (targetDetected) {
           playButton.style.display = "none";
           videoPlane.setAttribute('visible', true);
           video.play().catch(error => {
-            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+            console.error('Autoplay was prevented.', error);
           });
         }
-      });
+      };
 
-      const sceneEl = document.querySelector('a-scene');
-      const smoothingFactor = 0.1;
-      let lastPosition = new THREE.Vector3();
-      let lastRotation = new THREE.Euler();
+      const setupTargetDetection = (sceneEl, video, videoPlane) => {
+        sceneEl.addEventListener('targetFound', () => {
+          console.log('Target found');
+          targetDetected = true;
+          if (!video.paused) video.play();
+          if (!videoPlaying) playButton.style.display = "block";
+        });
 
-      sceneEl.addEventListener('targetFound', (event) => {
-        console.log('Target found');
-        targetDetected = true;
-        if (!video.paused) {
-          video.play();
-        }
-        if (!videoPlaying) {
-          playButton.style.display = "block"; // Show play button when target is found
-        }
-      });
-
-      sceneEl.addEventListener('targetLost', (event) => {
-        console.log('Target lost');
-        video.pause();
-        video.currentTime = 0;
-        playButton.style.display = "block"; // Show play button when target is lost
-        targetDetected = false;
-        videoPlane.setAttribute('visible', false); // Hide video plane on target lost
-      });
-
-      sceneEl.addEventListener('object3dset', (event) => {
-        const object3D = videoPlane.object3D;
-        if (object3D) {
-          const updateSmoothing = () => {
-            const currentPosition = object3D.position.clone();
-            const currentRotation = object3D.rotation.clone();
-
-            lastPosition.lerp(currentPosition, smoothingFactor);
-            lastRotation.slerp(currentRotation, smoothingFactor);
-
-            object3D.position.copy(lastPosition);
-            object3D.rotation.copy(lastRotation);
-
-            requestAnimationFrame(updateSmoothing);
-          };
-          updateSmoothing();
-        }
-      });
-
-      // Show or hide video plane based on target detection
-      setInterval(() => {
-        if (targetDetected && !video.paused) {
-          videoPlane.setAttribute('visible', true);
-        } else {
+        sceneEl.addEventListener('targetLost', () => {
+          console.log('Target lost');
+          video.pause();
+          video.currentTime = 0;
+          playButton.style.display = "block";
+          targetDetected = false;
           videoPlane.setAttribute('visible', false);
-        }
-      }, 500); // Adjust this interval as needed
+        });
+      };
 
-      document.addEventListener('click', () => {
-        if (targetDetected && video.paused) {
-          video.play();
+      const setupVideoEvents = (video, videoPlane) => {
+        video.addEventListener("play", () => videoPlaying = true);
+        video.addEventListener("pause", () => videoPlaying = false);
+
+        setInterval(() => {
+          videoPlane.setAttribute('visible', targetDetected && !video.paused);
+        }, 500);
+      };
+
+      playButton.addEventListener("click", () => {
+        const target1Video = document.getElementById("vid");
+        const target2Video = document.getElementById("vid2");
+        const videoPlane1 = document.querySelector('a-plane[targetIndex="0"]');
+        const videoPlane2 = document.querySelector('a-plane[targetIndex="1"]');
+
+        if (targetDetected) {
+          if (target1Video.paused) {
+            handlePlayButtonClick(target1Video, videoPlane1);
+          } else if (target2Video.paused) {
+            handlePlayButtonClick(target2Video, videoPlane2);
+          }
         }
       });
 
-      // Remove background and show AR scene once the AR scene is ready
+      const arScene = document.getElementById("ar-scene");
+      const sceneEl = document.querySelector('a-scene');
       sceneEl.addEventListener('loaded', () => {
         document.body.style.background = 'none';
         arScene.style.display = 'block';
       });
 
-      // Event listener for video play and pause
-      video.addEventListener('play', () => {
-        videoPlaying = true;
-      });
-
-      video.addEventListener('pause', () => {
-        videoPlaying = false;
-      });
+      setupTargetDetection(sceneEl, document.getElementById("vid"), document.querySelector('a-plane[targetIndex="0"]'));
+      setupTargetDetection(sceneEl, document.getElementById("vid2"), document.querySelector('a-plane[targetIndex="1"]'));
+      setupVideoEvents(document.getElementById("vid"), document.querySelector('a-plane[targetIndex="0"]'));
+      setupVideoEvents(document.getElementById("vid2"), document.querySelector('a-plane[targetIndex="1"]'));
     });
   </script>
 </head>
@@ -224,22 +189,17 @@
     >
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
       <a-assets>
-        <video
-          id="vid"
-          src="assets/asset.mp4"
-          preload="auto"
-          loop
-          crossorigin
-          webkit-playsinline
-          playsinline
-        ></video>
+        <video id="vid" src="assets/asset.mp4" preload="auto" loop crossorigin playsinline></video>
+        <video id="vid2" src="assets/asset2.mp4" preload="auto" loop crossorigin playsinline></video>
       </a-assets>
       <a-entity mindar-image-target="targetIndex: 0">
         <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
       </a-entity>
+      <a-entity mindar-image-target="targetIndex: 1" marker="url(./assets/marker2.patt)">
+        <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid2"></a-plane>
+      </a-entity>
     </a-scene>
   </div>
-  <!-- Play button -->
   <div id="playButton" class="play-button"></div>
 </body>
 </html>
