@@ -78,8 +78,8 @@
       const video1 = document.getElementById("vid1");
       const video2 = document.getElementById("vid2");
       const playButton = document.getElementById("playButton");
-      const videoPlane1 = document.querySelector('a-entity[target-index="0"] a-plane');
-      const videoPlane2 = document.querySelector('a-entity[target-index="1"] a-plane');
+      const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane'); // Swapped indices
+      const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane'); // Swapped indices
       const arScene = document.getElementById("ar-scene");
       const loadingScreen = document.getElementById("loading-screen");
 
@@ -125,8 +125,9 @@
           console.log(`Target ${targetIndex} found`);
           targetDetected = true;
           
-          currentVideo = targetIndex === 0 ? video1 : video2;
-          currentPlane = targetIndex === 0 ? videoPlane1 : videoPlane2;
+          // Swapped the video assignment
+          currentVideo = targetIndex === 0 ? video2 : video1;
+          currentPlane = targetIndex === 0 ? videoPlane2 : videoPlane1;
           
           pauseOtherVideos(currentVideo);
           
@@ -137,7 +138,7 @@
 
         targetEntity.addEventListener('targetLost', () => {
           console.log(`Target ${targetIndex} lost`);
-          if (currentVideo === (targetIndex === 0 ? video1 : video2)) {
+          if (currentVideo === (targetIndex === 0 ? video2 : video1)) { // Swapped video check
             currentVideo.pause();
             currentVideo.currentTime = 0;
             playButton.style.display = "block";
@@ -197,23 +198,25 @@
           playsinline
         ></video>
       </a-assets>
+      
+      <!-- Swapped the video sources and increased size -->
       <a-entity mindar-image-target="targetIndex: 0" target-index="0">
         <a-plane 
-          width="1" 
-          height="1" 
+          width="2" 
+          height="2" 
           position="0 0 0" 
           rotation="0 0 0" 
-          material="src: #vid1; transparent: true; alphaTest: 0.5"
+          material="src: #vid2; transparent: true; alphaTest: 0.5"
           video-handler
         ></a-plane>
       </a-entity>
       <a-entity mindar-image-target="targetIndex: 1" target-index="1">
         <a-plane 
-          width="1" 
-          height="1" 
+          width="2" 
+          height="2" 
           position="0 0 0" 
           rotation="0 0 0" 
-          material="src: #vid2; transparent: true; alphaTest: 0.5"
+          material="src: #vid1; transparent: true; alphaTest: 0.5"
           video-handler
         ></a-plane>
       </a-entity>
