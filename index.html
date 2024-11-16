@@ -115,15 +115,10 @@
     });
 
     document.addEventListener("DOMContentLoaded", () => {
-      // Initialize arrays for multiple targets and videos
-      const videos = {
-        vid1: document.getElementById("vid1"),
-        vid2: document.getElementById("vid2")
-      };
-      const playButtons = {
-        0: document.getElementById("playButton1"),
-        1: document.getElementById("playButton2")
-      };
+      const video1 = document.getElementById("vid1");
+      const video2 = document.getElementById("vid2");
+      const playButton1 = document.getElementById("playButton1");
+      const playButton2 = document.getElementById("playButton2");
       const videoPlanes = document.querySelectorAll('a-plane');
       const arScene = document.getElementById("ar-scene");
 
@@ -134,61 +129,80 @@
       };
 
       // Initialize videos
-      Object.values(videos).forEach(video => {
+      [video1, video2].forEach(video => {
         video.muted = false;
         video.addEventListener("canplay", () => console.log("Video can play"));
         video.addEventListener("error", (e) => console.error("Error loading video:", e));
       });
 
-      // Setup play button listeners
-      Object.entries(playButtons).forEach(([targetIndex, button]) => {
-        button.addEventListener("click", () => {
-          if (targetStates[targetIndex].detected) {
-            button.style.display = "none";
-            const video = targetIndex === "0" ? videos.vid1 : videos.vid2;
-            videoPlanes[targetIndex].setAttribute('visible', true);
-            video.play().catch(error => {
-              console.error('Autoplay was prevented:', error);
-            });
-          }
-        });
+      // Setup play buttons
+      playButton1.addEventListener("click", () => {
+        if (targetStates[0].detected) {
+          playButton1.style.display = "none";
+          videoPlanes[0].setAttribute('visible', true);
+          video1.play().catch(error => {
+            console.error('Autoplay was prevented:', error);
+          });
+        }
+      });
+
+      playButton2.addEventListener("click", () => {
+        if (targetStates[1].detected) {
+          playButton2.style.display = "none";
+          videoPlanes[1].setAttribute('visible', true);
+          video2.play().catch(error => {
+            console.error('Autoplay was prevented:', error);
+          });
+        }
       });
 
       const sceneEl = document.querySelector('a-scene');
       const smoothingFactor = 0.1;
-      const lastPositions = {};
-      const lastRotations = {};
+      const lastPositions = {
+        0: new THREE.Vector3(),
+        1: new THREE.Vector3()
+      };
+      const lastRotations = {
+        0: new THREE.Euler(),
+        1: new THREE.Euler()
+      };
 
       // Target detection handlers
-      sceneEl.addEventListener('targetFound', (event) => {
+      const targetFoundHandler = (event) => {
         const targetIndex = event.detail.target.targetIndex;
         console.log(`Target ${targetIndex} found`);
         targetStates[targetIndex].detected = true;
         
-        const video = targetIndex === 0 ? videos.vid1 : videos.vid2;
-        if (!video.paused) video.play();
-        if (!targetStates[targetIndex].playing) {
-          playButtons[targetIndex].style.display = "block";
+        const video = targetIndex === 0 ? video1 : video2;
+        const playButton = targetIndex === 0 ? playButton1 : playButton2;
+        
+        if (!video.paused) {
+          video.play();
         }
-      });
+        if (!targetStates[targetIndex].playing) {
+          playButton.style.display = "block";
+        }
+      };
 
-      sceneEl.addEventListener('targetLost', (event) => {
+      const targetLostHandler = (event) => {
         const targetIndex = event.detail.target.targetIndex;
         console.log(`Target ${targetIndex} lost`);
         
-        const video = targetIndex === 0 ? videos.vid1 : videos.vid2;
+        const video = targetIndex === 0 ? video1 : video2;
+        const playButton = targetIndex === 0 ? playButton1 : playButton2;
+        
         video.pause();
         video.currentTime = 0;
-        playButtons[targetIndex].style.display = "block";
+        playButton.style.display = "block";
         targetStates[targetIndex].detected = false;
         videoPlanes[targetIndex].setAttribute('visible', false);
-      });
+      };
+
+      sceneEl.addEventListener('targetFound', targetFoundHandler);
+      sceneEl.addEventListener('targetLost', targetLostHandler);
 
       // Position smoothing for each video plane
       videoPlanes.forEach((plane, index) => {
-        lastPositions[index] = new THREE.Vector3();
-        lastRotations[index] = new THREE.Euler();
-        
         const updateSmoothing = () => {
           const object3D = plane.object3D;
           if (object3D) {
@@ -213,7 +227,7 @@
       });
 
       // Video state handlers
-      Object.entries(videos).forEach(([key, video], index) => {
+      [video1, video2].forEach((video, index) => {
         video.addEventListener('play', () => {
           targetStates[index].playing = true;
         });
@@ -227,7 +241,7 @@
 <body>
   <div id="ar-scene">
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind, ./targets2.mind; filterMinCF:0.0001; filterBeta:0.001"
+      mindar-image="imageTargetSrc: targets.mind;"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
