@@ -19,8 +19,10 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 80px; /* Adjusted width for smaller triangle */
-      height: 80px; /* Adjusted height for smaller triangle */
+      width: 60px;
+      height: 60px;
+      background-color: rgba(0, 0, 0, 0.7);
+      border-radius: 50%;
       display: none; /* Initially hide the play button */
       justify-content: center;
       align-items: center;
@@ -33,40 +35,8 @@
       width: 0;
       height: 0;
       border-style: solid;
-      border-width: 10px 0 10px 17.3px; /* Adjusted size of the triangle */
-      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7); /* Transparent white color */
-      position: absolute;
-      transform: translate(10px, 0); /* Adjusted to center the triangle within the circle */
-    }
-
-    .scanner {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 200px;
-      height: 200px;
-      border: 5px solid rgba(255, 255, 255, 0.7);
-      border-radius: 50%;
-      display: none; /* Initially hide the scanner */
-      z-index: 999;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% {
-        transform: scale(1);
-        box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-      }
-      50% {
-        transform: scale(1.1);
-        box-shadow: 0 0 30px rgba(255, 255, 255, 0.7);
-      }
-      100% {
-        transform: scale(1);
-        box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-      }
+      border-width: 15px 0 15px 25px;
+      border-color: transparent transparent transparent white;
     }
 
     a-plane {
@@ -145,7 +115,6 @@
       const playButton = document.getElementById("playButton");
       const videoPlane = document.querySelector('a-plane');
       const arScene = document.getElementById("ar-scene");
-      const scanner = document.getElementById("scanner");
 
       video.muted = false;
 
@@ -163,7 +132,6 @@
       playButton.addEventListener("click", () => {
         if (targetDetected) {
           playButton.style.display = "none";
-          scanner.style.display = "none";
           videoPlane.setAttribute('visible', true);
           video.play().catch(error => {
             console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
@@ -179,7 +147,6 @@
       sceneEl.addEventListener('targetFound', (event) => {
         console.log('Target found');
         targetDetected = true;
-        scanner.style.display = "none";
         if (!video.paused) {
           video.play();
         }
@@ -193,7 +160,6 @@
         video.pause();
         video.currentTime = 0;
         playButton.style.display = "block"; // Show play button when target is lost
-        scanner.style.display = "block"; // Show scanner when target is lost
         targetDetected = false;
         videoPlane.setAttribute('visible', false); // Hide video plane on target lost
       });
@@ -269,13 +235,11 @@
         ></video>
       </a-assets>
       <a-entity mindar-image-target="targetIndex: 0">
-          <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
+        <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
       </a-entity>
     </a-scene>
   </div>
   <!-- Play button -->
   <div id="playButton" class="play-button"></div>
-  <!-- Scanner -->
-  <div id="scanner" class="scanner"></div>
 </body>
 </html>
