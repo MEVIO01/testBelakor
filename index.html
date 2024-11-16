@@ -124,6 +124,10 @@
       video1.muted = false;
       video2.muted = false;
 
+      // Autoplay check to allow videos to start once the scene is ready
+      video1.play().catch(err => console.log('Error playing video 1:', err));
+      video2.play().catch(err => console.log('Error playing video 2:', err));
+
       playButton.addEventListener("click", () => {
         if (targetDetected1 || targetDetected2) {
           playButton.style.display = "none";
@@ -217,9 +221,10 @@
         <a-plane id="plane2" width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid2"></a-plane>
       </a-entity>
     </a-scene>
+
   </div>
 
-  <!-- Play button -->
   <div id="playButton" class="play-button"></div>
+
 </body>
 </html>
