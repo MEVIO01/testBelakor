@@ -66,12 +66,12 @@
           const videoTexture = new THREE.VideoTexture(videoEl);
           mesh.material.map = videoTexture;
           mesh.material.needsUpdate = true;
-          this.el.setAttribute('visible', true);
+          this.el.setAttribute('visible', true);  // Show the plane when the video plays
           this.toggleShader(true);
         });
 
         videoEl.addEventListener('pause', () => {
-          this.el.setAttribute('visible', false);
+          this.el.setAttribute('visible', false);  // Hide the plane when the video pauses
           this.toggleShader(false);
         });
 
@@ -110,56 +110,65 @@
       }
     });
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const video1 = document.getElementById("vid1");
-      const video2 = document.getElementById("vid2");
-      const playButton = document.getElementById("playButton");
+    document.addEventListener('DOMContentLoaded', () => {
+      const video1 = document.getElementById('vid1');
+      const video2 = document.getElementById('vid2');
+      const playButton1 = document.getElementById('playButton1');
+      const playButton2 = document.getElementById('playButton2');
       const videoPlane1 = document.querySelector('#videoPlane1');
       const videoPlane2 = document.querySelector('#videoPlane2');
-      const arScene = document.getElementById("ar-scene");
-
-      let targetDetected = false;
-      let videoPlaying = false;
-      let currentVideo = null;
+      const arScene = document.getElementById('ar-scene');
 
       video1.muted = false;
       video2.muted = false;
 
-      playButton.addEventListener("click", () => {
-        if (targetDetected) {
-          playButton.style.display = "none";
-          if (currentVideo === 1) {
-            videoPlane1.setAttribute('visible', true);
-            video1.play();
-          } else if (currentVideo === 2) {
-            videoPlane2.setAttribute('visible', true);
-            video2.play();
-          }
+      let targetDetected1 = false;
+      let targetDetected2 = false;
+
+      playButton1.addEventListener('click', () => {
+        if (targetDetected1) {
+          playButton1.style.display = 'none';
+          videoPlane1.setAttribute('visible', true);
+          video1.play().catch(error => {
+            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+          });
+        }
+      });
+
+      playButton2.addEventListener('click', () => {
+        if (targetDetected2) {
+          playButton2.style.display = 'none';
+          videoPlane2.setAttribute('visible', true);
+          video2.play().catch(error => {
+            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+          });
         }
       });
 
       const sceneEl = document.querySelector('a-scene');
 
       sceneEl.addEventListener('targetFound', (event) => {
-        const targetIndex = event.target.getAttribute('targetIndex');
-        targetDetected = true;
-        if (targetIndex === '0') {
-          currentVideo = 1;
-        } else if (targetIndex === '1') {
-          currentVideo = 2;
+        if (event.target.getAttribute('targetIndex') === '0') {
+          targetDetected1 = true;
+          playButton1.style.display = 'block'; // Show play button for first marker
+        } else if (event.target.getAttribute('targetIndex') === '1') {
+          targetDetected2 = true;
+          playButton2.style.display = 'block'; // Show play button for second marker
         }
-        playButton.style.display = "block";
       });
 
-      sceneEl.addEventListener('targetLost', () => {
-        video1.pause();
-        video2.pause();
-        video1.currentTime = 0;
-        video2.currentTime = 0;
-        playButton.style.display = "block";
-        targetDetected = false;
-        videoPlane1.setAttribute('visible', false);
-        videoPlane2.setAttribute('visible', false);
+      sceneEl.addEventListener('targetLost', (event) => {
+        if (event.target.getAttribute('targetIndex') === '0') {
+          video1.pause();
+          playButton1.style.display = 'block'; // Show play button for first marker
+          targetDetected1 = false;
+          videoPlane1.setAttribute('visible', false);
+        } else if (event.target.getAttribute('targetIndex') === '1') {
+          video2.pause();
+          playButton2.style.display = 'block'; // Show play button for second marker
+          targetDetected2 = false;
+          videoPlane2.setAttribute('visible', false);
+        }
       });
 
       sceneEl.addEventListener('loaded', () => {
@@ -168,61 +177,41 @@
       });
 
       video1.addEventListener('play', () => {
-        videoPlaying = true;
+        videoPlane1.setAttribute('visible', true);
       });
 
       video1.addEventListener('pause', () => {
-        videoPlaying = false;
+        videoPlane1.setAttribute('visible', false);
       });
 
       video2.addEventListener('play', () => {
-        videoPlaying = true;
+        videoPlane2.setAttribute('visible', true);
       });
 
       video2.addEventListener('pause', () => {
-        videoPlaying = false;
+        videoPlane2.setAttribute('visible', false);
       });
     });
   </script>
 </head>
 <body>
   <div id="ar-scene">
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
-    >
+    <a-scene mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
       <a-assets>
-        <video
-          id="vid1"
-          src="assets/asset1.mp4"
-          preload="auto"
-          loop
-          crossorigin
-          webkit-playsinline
-          playsinline
-        ></video>
-        <video
-          id="vid2"
-          src="assets/asset2.mp4"
-          preload="auto"
-          loop
-          crossorigin
-          webkit-playsinline
-          playsinline
-        ></video>
+        <video id="vid1" src="assets/video1.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
+        <video id="vid2" src="assets/video2.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
       </a-assets>
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane id="videoPlane1" width="2" height="2" position="0 0 0" blur-video="#vid1"></a-plane>
+        <a-plane id="videoPlane1" width="1" height="1" position="0 0 0" blur-video="#vid1"></a-plane>
       </a-entity>
       <a-entity mindar-image-target="targetIndex: 1">
-        <a-plane id="videoPlane2" width="2" height="2" position="0 0 0" blur-video="#vid2"></a-plane>
+        <a-plane id="videoPlane2" width="1" height="1" position="0 0 0" blur-video="#vid2"></a-plane>
       </a-entity>
     </a-scene>
   </div>
 
-  <!-- Play button -->
-  <div id="playButton" class="play-button"></div>
+  <div id="playButton1" class="play-button"></div>
+  <div id="playButton2" class="play-button"></div>
 </body>
 </html>
