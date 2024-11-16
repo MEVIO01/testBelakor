@@ -118,42 +118,60 @@
       const videoPlane2 = document.querySelector('#plane2');
       const arScene = document.getElementById("ar-scene");
 
-      let targetDetected = false;
+      let targetDetected1 = false;
+      let targetDetected2 = false;
 
       video1.muted = false;
       video2.muted = false;
 
       playButton.addEventListener("click", () => {
-        if (targetDetected) {
+        if (targetDetected1 || targetDetected2) {
           playButton.style.display = "none";
-          videoPlane1.setAttribute('visible', true);
-          videoPlane2.setAttribute('visible', true);
-          video1.play().catch(error => console.error('Autoplay was prevented.', error));
-          video2.play().catch(error => console.error('Autoplay was prevented.', error));
+          if (targetDetected1) {
+            videoPlane1.setAttribute('visible', true);
+            video1.play().catch(error => console.error('Autoplay was prevented.', error));
+          }
+          if (targetDetected2) {
+            videoPlane2.setAttribute('visible', true);
+            video2.play().catch(error => console.error('Autoplay was prevented.', error));
+          }
         }
       });
 
-      const sceneEl = document.querySelector('a-scene');
-      
-      sceneEl.addEventListener('targetFound', (event) => {
-        targetDetected = true;
+      const sceneEl1 = document.querySelector('#scene1');
+      const sceneEl2 = document.querySelector('#scene2');
+
+      // Event listeners for the first target scene
+      sceneEl1.addEventListener('targetFound', (event) => {
+        targetDetected1 = true;
         video1.play();
+        playButton.style.display = "block"; // Show play button
+      });
+
+      sceneEl1.addEventListener('targetLost', (event) => {
+        video1.pause();
+        video1.currentTime = 0;
+        playButton.style.display = "block";
+        targetDetected1 = false;
+        videoPlane1.setAttribute('visible', false);
+      });
+
+      // Event listeners for the second target scene
+      sceneEl2.addEventListener('targetFound', (event) => {
+        targetDetected2 = true;
         video2.play();
         playButton.style.display = "block"; // Show play button
       });
 
-      sceneEl.addEventListener('targetLost', (event) => {
-        video1.pause();
+      sceneEl2.addEventListener('targetLost', (event) => {
         video2.pause();
-        video1.currentTime = 0;
         video2.currentTime = 0;
         playButton.style.display = "block";
-        targetDetected = false;
-        videoPlane1.setAttribute('visible', false);
+        targetDetected2 = false;
         videoPlane2.setAttribute('visible', false);
       });
 
-      sceneEl.addEventListener('loaded', () => {
+      sceneEl1.addEventListener('loaded', () => {
         document.body.style.background = 'none';
         arScene.style.display = 'block';
       });
@@ -162,37 +180,33 @@
 </head>
 <body>
   <div id="ar-scene">
-    <a-scene
+    <!-- First scene with targets.mind -->
+    <a-scene id="scene1"
       mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-      <!-- First target with mindar-image (targets.mind) -->
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-assets>
         <video id="vid" src="assets/asset.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
-        <video id="vid2" src="assets/asset2.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
       </a-assets>
 
       <!-- First target plane with video -->
       <a-entity mindar-image-target="targetIndex: 0">
         <a-plane id="plane1" width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
       </a-entity>
-
     </a-scene>
 
-    <!-- Second scene for targets2.mind -->
-    <a-scene
+    <!-- Second scene with targets2.mind -->
+    <a-scene id="scene2"
       mindar-image="imageTargetSrc: ./targets2.mind; filterMinCF:0.0001; filterBeta:0.001"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
-      <!-- Second target with mindar-image (targets2.mind) -->
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
       <a-assets>
-        <video id="vid" src="assets/asset.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
         <video id="vid2" src="assets/asset2.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
       </a-assets>
 
