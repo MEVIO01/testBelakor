@@ -19,10 +19,8 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 60px;
-      height: 60px;
-      background-color: rgba(0, 0, 0, 0.7);
-      border-radius: 50%;
+      width: 80px; /* Adjusted width for smaller triangle */
+      height: 80px; /* Adjusted height for smaller triangle */
       display: none; /* Initially hide the play button */
       justify-content: center;
       align-items: center;
@@ -35,8 +33,10 @@
       width: 0;
       height: 0;
       border-style: solid;
-      border-width: 15px 0 15px 25px;
-      border-color: transparent transparent transparent white;
+      border-width: 20px 0 20px 40px; /* Adjusted size of the triangle */
+      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7); /* Transparent white color */
+      transform: translateX(5px); /* Move the triangle slightly to the right to center it */
+      position: absolute;
     }
 
     a-plane {
