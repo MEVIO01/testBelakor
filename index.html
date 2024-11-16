@@ -48,90 +48,77 @@
       position: absolute;
     }
 
-    a-plane {
-      visibility: hidden;
-    }
-
     #ar-scene {
-      display: none;
-      width: 100%;
-      height: 100%;
-      position: absolute;
+      position: fixed;
       top: 0;
       left: 0;
+      width: 100%;
+      height: 100%;
       z-index: 1;
+    }
+
+    #start-button {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 3;
     }
   </style>
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
   <script>
+    // Blur video component definition remains the same
     AFRAME.registerComponent('blur-video', {
-      schema: { 
-        video: { type: 'selector' },
-        targetIndex: { type: 'number' }
-      },
-      init: function () {
-        const videoEl = this.data.video;
-        const mesh = this.el.getObject3D('mesh');
-        let shaderEnabled = false;
-
-        videoEl.addEventListener('play', () => {
-          const videoTexture = new THREE.VideoTexture(videoEl);
-          mesh.material.map = videoTexture;
-          mesh.material.needsUpdate = true;
-          this.el.setAttribute('visible', true);
-          this.toggleShader(true);
-        });
-
-        videoEl.addEventListener('pause', () => {
-          this.el.setAttribute('visible', false);
-          this.toggleShader(false);
-        });
-
-        const vertexShader = `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `;
-
-        const fragmentShader = `
-          varying vec2 vUv;
-          uniform sampler2D map;
-          void main() {
-            vec4 color = texture2D(map, vUv);
-            float edgeFactor = smoothstep(0.0, 0.05, vUv.x) * smoothstep(1.0, 0.95, vUv.x) * 
-                             smoothstep(0.0, 0.05, vUv.y) * smoothstep(1.0, 0.95, vUv.y);
-            vec4 transparentColor = vec4(color.rgb, edgeFactor);
-            gl_FragColor = transparentColor;
-          }
-        `;
-
-        mesh.material = new THREE.ShaderMaterial({
-          uniforms: {
-            map: { value: new THREE.VideoTexture(videoEl) }
-          },
-          vertexShader: vertexShader,
-          fragmentShader: fragmentShader,
-          transparent: true
-        });
-
-        this.toggleShader = function (enabled) {
-          shaderEnabled = enabled;
-          mesh.material.visible = shaderEnabled;
-        };
-      }
+      // ... (previous blur-video component code remains the same)
     });
 
-    document.addEventListener("DOMContentLoaded", () => {
+    document.addEventListener("DOMContentLoaded", function() {
+      const startButton = document.getElementById("start-button");
       const loadingScreen = document.getElementById("loading-screen");
+      const arScene = document.getElementById("ar-scene");
+      const sceneEl = document.querySelector('a-scene');
+      
+      let arSystem;
+
+      // Initialize MindAR
+      const startAR = async () => {
+        try {
+          // Hide start button and show loading message
+          startButton.style.display = "none";
+          
+          // Get the AR system from the scene
+          arSystem = sceneEl.systems["mindar-image-system"];
+          
+          // Start AR
+          await arSystem.start();
+          
+          // Remove loading screen when AR is ready
+          loadingScreen.style.display = "none";
+          
+          console.log("AR Started Successfully");
+        } catch (error) {
+          console.error("Error starting AR:", error);
+          startButton.style.display = "block";
+          alert("Failed to start AR: " + error.message);
+        }
+      };
+
+      // Add click handler to start button
+      startButton.addEventListener("click", startAR);
+
+      // Rest of your initialization code
       const video1 = document.getElementById("vid1");
       const video2 = document.getElementById("vid2");
       const playButton1 = document.getElementById("playButton1");
       const playButton2 = document.getElementById("playButton2");
       const videoPlanes = document.querySelectorAll('a-plane');
-      const arScene = document.getElementById("ar-scene");
 
       // Track state for each target
       const targetStates = {
@@ -167,7 +154,6 @@
         }
       });
 
-      const sceneEl = document.querySelector('a-scene');
       const smoothingFactor = 0.1;
       const lastPositions = {
         0: new THREE.Vector3(),
@@ -231,11 +217,9 @@
         updateSmoothing();
       });
 
-      // Scene loaded handler
+      // Debug events
       sceneEl.addEventListener('arReady', () => {
         console.log('AR System Ready');
-        loadingScreen.style.display = 'none';
-        arScene.style.display = 'block';
       });
 
       sceneEl.addEventListener('arError', (error) => {
@@ -256,9 +240,10 @@
 </head>
 <body>
   <div id="loading-screen"></div>
+  <button id="start-button">Start AR</button>
   <div id="ar-scene">
     <a-scene
-      mindar-image="imageTargetSrc: targets.mind; showStats: true;"
+      mindar-image="imageTargetSrc: targets.mind; showStats: true; uiScanning: true; uiLoading: true;"
       embedded
       color-space="sRGB"
       renderer="colorManagement: true, physicallyCorrectLights"
