@@ -114,154 +114,104 @@
       const video1 = document.getElementById("vid1");
       const video2 = document.getElementById("vid2");
       const playButton = document.getElementById("playButton");
-      const videoPlane1 = document.querySelector('#plane1');
-      const videoPlane2 = document.querySelector('#plane2');
+      const videoPlane1 = document.querySelector('#videoPlane1');
+      const videoPlane2 = document.querySelector('#videoPlane2');
       const arScene = document.getElementById("ar-scene");
 
       video1.muted = false;
       video2.muted = false;
 
-      let target1Detected = false;
-      let target2Detected = false;
-      let videoPlaying = false;
-
-      video1.addEventListener("canplay", () => {
-        console.log("Video1 can play");
-      });
-
-      video2.addEventListener("canplay", () => {
-        console.log("Video2 can play");
-      });
-
-      video1.addEventListener("error", (e) => {
-        console.error("Error loading video1:", e);
-      });
-
-      video2.addEventListener("error", (e) => {
-        console.error("Error loading video2:", e);
-      });
+      let targetDetected1 = false;
+      let targetDetected2 = false;
 
       playButton.addEventListener("click", () => {
-        if (target1Detected || target2Detected) {
+        if (targetDetected1) {
           playButton.style.display = "none";
-          if (target1Detected) {
-            videoPlane1.setAttribute('visible', true);
-            video1.play().catch(error => {
-              console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
-            });
-          } else if (target2Detected) {
-            videoPlane2.setAttribute('visible', true);
-            video2.play().catch(error => {
-              console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
-            });
-          }
+          videoPlane1.setAttribute('visible', true);
+          video1.play().catch(error => {
+            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+          });
+        }
+        if (targetDetected2) {
+          videoPlane2.setAttribute('visible', true);
+          video2.play().catch(error => {
+            console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
+          });
         }
       });
 
       const sceneEl = document.querySelector('a-scene');
-      const smoothingFactor = 0.1;
-      let lastPosition1 = new THREE.Vector3();
-      let lastRotation1 = new THREE.Euler();
-      let lastPosition2 = new THREE.Vector3();
-      let lastRotation2 = new THREE.Euler();
 
       sceneEl.addEventListener('targetFound', (event) => {
-        const targetName = event.target.id;
-        if (targetName === 'target1') {
-          console.log('Target 1 found');
-          target1Detected = true;
+        const targetIndex = event.detail.targetIndex;
+        console.log(`Target ${targetIndex} found`);
+        if (targetIndex === 0) {
+          targetDetected1 = true;
         }
-        if (targetName === 'target2') {
-          console.log('Target 2 found');
-          target2Detected = true;
+        if (targetIndex === 1) {
+          targetDetected2 = true;
         }
-
-        if (!video1.paused && target1Detected) {
+        if (!video1.paused) {
           video1.play();
         }
-        if (!video2.paused && target2Detected) {
+        if (!video2.paused) {
           video2.play();
         }
-
-        if (!videoPlaying) {
-          playButton.style.display = "block"; // Show play button when target is found
+        if (!targetDetected1 && !targetDetected2) {
+          playButton.style.display = "block";
         }
       });
 
       sceneEl.addEventListener('targetLost', (event) => {
-        const targetName = event.target.id;
-        if (targetName === 'target1') {
-          console.log('Target 1 lost');
-          target1Detected = false;
+        const targetIndex = event.detail.targetIndex;
+        console.log(`Target ${targetIndex} lost`);
+        if (targetIndex === 0) {
           video1.pause();
           video1.currentTime = 0;
           videoPlane1.setAttribute('visible', false);
+          targetDetected1 = false;
         }
-        if (targetName === 'target2') {
-          console.log('Target 2 lost');
-          target2Detected = false;
+        if (targetIndex === 1) {
           video2.pause();
           video2.currentTime = 0;
           videoPlane2.setAttribute('visible', false);
+          targetDetected2 = false;
         }
-
-        if (!target1Detected && !target2Detected) {
-          playButton.style.display = "block"; // Show play button when all targets are lost
-        }
+        playButton.style.display = "block";
       });
 
-      sceneEl.addEventListener('object3dset', (event) => {
-        const object3D1 = videoPlane1.object3D;
-        const object3D2 = videoPlane2.object3D;
-        if (object3D1) {
-          const updateSmoothing1 = () => {
-            const currentPosition1 = object3D1.position.clone();
-            const currentRotation1 = object3D1.rotation.clone();
-
-            lastPosition1.lerp(currentPosition1, smoothingFactor);
-            lastRotation1.slerp(currentRotation1, smoothingFactor);
-
-            object3D1.position.copy(lastPosition1);
-            object3D1.rotation.copy(lastRotation1);
-
-            requestAnimationFrame(updateSmoothing1);
-          };
-          updateSmoothing1();
-        }
-
-        if (object3D2) {
-          const updateSmoothing2 = () => {
-            const currentPosition2 = object3D2.position.clone();
-            const currentRotation2 = object3D2.rotation.clone();
-
-            lastPosition2.lerp(currentPosition2, smoothingFactor);
-            lastRotation2.slerp(currentRotation2, smoothingFactor);
-
-            object3D2.position.copy(lastPosition2);
-            object3D2.rotation.copy(lastRotation2);
-
-            requestAnimationFrame(updateSmoothing2);
-          };
-          updateSmoothing2();
-        }
+      sceneEl.addEventListener('loaded', () => {
+        document.body.style.background = 'none';
+        arScene.style.display = 'block';
       });
     });
   </script>
 </head>
 <body>
-  <div class="play-button" id="playButton"></div>
+  <div id="ar-scene">
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-assets>
+        <video id="vid1" src="assets/asset.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
+        <video id="vid2" src="assets/asset2.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
+      </a-assets>
 
-  <a-scene id="ar-scene" mindar="imageTargetSrc=assets/targets.mind; target2Src=assets/target2.mind">
-    <a-assets>
-      <video id="vid1" src="assets/asset.mp4" loop="true" autoplay="false"></video>
-      <video id="vid2" src="assets/asset2.mp4" loop="true" autoplay="false"></video>
-    </a-assets>
+      <!-- Target 1 -->
+      <a-entity mindar-image-target="targetIndex: 0">
+        <a-plane id="videoPlane1" width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid1"></a-plane>
+      </a-entity>
 
-    <a-image id="plane1" position="0 1 -4" scale="4 4 1" visible="false" blur-video="selector:#vid1"></a-image>
-    <a-image id="plane2" position="0 1 -4" scale="4 4 1" visible="false" blur-video="selector:#vid2"></a-image>
-
-    <a-marker id="target1" type="mindar" url="assets/target.mind"></a-marker>
-    <a-marker id="target2" type="mindar" url="assets/target2.mind"></a-marker>
-  </a-scene>
+      <!-- Target 2 -->
+      <a-entity mindar-image-target="targetIndex: 1">
+        <a-plane id="videoPlane2" width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid2"></a-plane>
+      </a-entity>
+    </a-scene>
+  </div>
+  <!-- Play button -->
+  <div id="playButton" class="play-button"></div>
 </body>
 </html>
