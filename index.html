@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AR Video with Blurred Edges</title>
   <style>
     body, html {
       margin: 0;
@@ -20,25 +19,24 @@
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 80px;
-      height: 80px;
-      border: 5px solid rgba(255, 255, 255, 0.7);
-      border-radius: 50%;
-      display: none;
+      width: 80px; /* Adjusted width for smaller triangle */
+      height: 80px; /* Adjusted height for smaller triangle */
+      display: none; /* Initially hide the play button */
       justify-content: center;
       align-items: center;
       cursor: pointer;
       z-index: 1000;
-      box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
-      animation: pulse 1.5s infinite;
     }
 
-    .triangle {
+    .play-button::before {
+      content: '';
       width: 0;
       height: 0;
-      border-top: 15px solid transparent;
-      border-bottom: 15px solid transparent;
-      border-left: 20px solid rgba(255, 255, 255, 0.7);
+      border-style: solid;
+      border-width: 10px 0 10px 17.3px; /* Adjusted size of the triangle */
+      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7); /* Transparent white color */
+      position: absolute;
+      transform: translate(10px, 0); /* Adjusted to center the triangle within the circle */
     }
 
     .scanner {
@@ -50,7 +48,7 @@
       height: 200px;
       border: 5px solid rgba(255, 255, 255, 0.7);
       border-radius: 50%;
-      display: none;
+      display: none; /* Initially hide the scanner */
       z-index: 999;
       box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       animation: pulse 1.5s infinite;
@@ -58,15 +56,15 @@
 
     @keyframes pulse {
       0% {
-        transform: translate(-50%, -50%) scale(1);
+        transform: scale(1);
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       }
       50% {
-        transform: translate(-50%, -50%) scale(1.1);
+        transform: scale(1.1);
         box-shadow: 0 0 30px rgba(255, 255, 255, 0.7);
       }
       100% {
-        transform: translate(-50%, -50%) scale(1);
+        transform: scale(1);
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
       }
     }
@@ -82,11 +80,6 @@
       position: absolute;
       top: 0;
       left: 0;
-    }
-
-    /* Hide the default scanner overlay */
-    .scanning {
-      display: none !important;
     }
   </style>
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
@@ -127,7 +120,7 @@
             vec4 color = texture2D(map, vUv);
             float edgeFactor = smoothstep(0.0, 0.05, vUv.x) * smoothstep(1.0, 0.95, vUv.x) * smoothstep(0.0, 0.05, vUv.y) * smoothstep(1.0, 0.95, vUv.y);
             vec4 transparentColor = vec4(color.rgb, edgeFactor);
-            gl_FragColor = transparentColor.
+            gl_FragColor = transparentColor;
           }
         `;
 
@@ -153,7 +146,6 @@
       const videoPlane = document.querySelector('a-plane');
       const arScene = document.getElementById("ar-scene");
       const scanner = document.getElementById("scanner");
-      const scanningOverlay = document.querySelector('.scanning');
 
       video.muted = false;
 
@@ -172,9 +164,6 @@
         if (targetDetected) {
           playButton.style.display = "none";
           scanner.style.display = "none";
-          if (scanningOverlay) {
-            scanningOverlay.style.display = "block";
-          }
           videoPlane.setAttribute('visible', true);
           video.play().catch(error => {
             console.error('Autoplay was prevented. Please interact with the page to enable video autoplay.', error);
@@ -191,14 +180,11 @@
         console.log('Target found');
         targetDetected = true;
         scanner.style.display = "none";
-        if (scanningOverlay) {
-          scanningOverlay.style.display = "none";
-        }
         if (!video.paused) {
           video.play();
         }
         if (!videoPlaying) {
-          playButton.style.display = "flex"; // Show play button when target is found
+          playButton.style.display = "block"; // Show play button when target is found
         }
       });
 
@@ -206,7 +192,7 @@
         console.log('Target lost');
         video.pause();
         video.currentTime = 0;
-        playButton.style.display = "flex"; // Show play button when target is lost
+        playButton.style.display = "block"; // Show play button when target is lost
         scanner.style.display = "block"; // Show scanner when target is lost
         targetDetected = false;
         videoPlane.setAttribute('visible', false); // Hide video plane on target lost
@@ -283,20 +269,13 @@
         ></video>
       </a-assets>
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
+          <a-plane width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid"></a-plane>
       </a-entity>
     </a-scene>
   </div>
-  
   <!-- Play button -->
-  <div id="playButton" class="play-button">
-    <div class="triangle"></div>
-  </div>
-  
+  <div id="playButton" class="play-button"></div>
   <!-- Scanner -->
   <div id="scanner" class="scanner"></div>
-  
-  <!-- Scanning Overlay -->
-  <div class="scanning"></div>
 </body>
 </html>
