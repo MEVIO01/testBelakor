@@ -146,6 +146,8 @@
         targetDetected1 = true;
         video1.play();
         playButton.style.display = "block"; // Show play button
+        // Scale plane dynamically based on camera distance
+        videoPlane1.setAttribute('scale', '1 1 1'); // Add scaling for proper size
       });
 
       sceneEl1.addEventListener('targetLost', (event) => {
@@ -161,6 +163,8 @@
         targetDetected2 = true;
         video2.play();
         playButton.style.display = "block"; // Show play button
+        // Scale plane dynamically based on camera distance
+        videoPlane2.setAttribute('scale', '1 1 1'); // Add scaling for proper size
       });
 
       sceneEl2.addEventListener('targetLost', (event) => {
