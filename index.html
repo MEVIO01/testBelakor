@@ -21,9 +21,7 @@
       transform: translate(-50%, -50%);
       width: 80px;
       height: 80px;
-      display: none;
-      justify-content: center;
-      align-items: center;
+      display: none; /* Initially hidden */
       cursor: pointer;
       z-index: 1000;
     }
@@ -39,10 +37,6 @@
       position: absolute;
     }
 
-    a-plane {
-      visibility: hidden;
-    }
-
     #ar-scene {
       display: none;
       width: 100%;
@@ -55,113 +49,70 @@
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
   <script>
-    AFRAME.registerComponent('blur-video', {
-      schema: { type: 'selector' },
-      init: function () {
-        const videoEl = this.data;
-        const mesh = this.el.getObject3D('mesh');
-
-        videoEl.addEventListener('play', () => {
-          const videoTexture = new THREE.VideoTexture(videoEl);
-          mesh.material.map = videoTexture;
-          mesh.material.needsUpdate = true;
-          this.el.setAttribute('visible', true);
-        });
-
-        videoEl.addEventListener('pause', () => {
-          this.el.setAttribute('visible', false);
-        });
-
-        const vertexShader = `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `;
-
-        const fragmentShader = `
-          varying vec2 vUv;
-          uniform sampler2D map;
-          void main() {
-            vec4 color = texture2D(map, vUv);
-            float edgeFactor = smoothstep(0.0, 0.05, vUv.x) * smoothstep(1.0, 0.95, vUv.x) * smoothstep(0.0, 0.05, vUv.y) * smoothstep(1.0, 0.95, vUv.y);
-            vec4 transparentColor = vec4(color.rgb, edgeFactor);
-            gl_FragColor = transparentColor;
-          }
-        `;
-
-        mesh.material = new THREE.ShaderMaterial({
-          uniforms: {
-            map: { value: new THREE.VideoTexture(videoEl) }
-          },
-          vertexShader: vertexShader,
-          fragmentShader: fragmentShader,
-          transparent: true
-        });
-      }
-    });
-
     document.addEventListener("DOMContentLoaded", () => {
+      const playButton = document.getElementById("playButton");
       const video1 = document.getElementById("vid1");
       const video2 = document.getElementById("vid2");
-      const playButton1 = document.getElementById("playButton1");
-      const playButton2 = document.getElementById("playButton2");
-      const videoPlane1 = document.querySelector('#plane1');
-      const videoPlane2 = document.querySelector('#plane2');
-      const arScene = document.getElementById("ar-scene");
+      const videoPlane1 = document.querySelector('#video-plane-1');
+      const videoPlane2 = document.querySelector('#video-plane-2');
 
-      video1.muted = false;
-      video2.muted = false;
+      let targetDetected = false;
+      let currentVideo = null;
 
-      let target1Detected = false;
-      let target2Detected = false;
-
-      playButton1.addEventListener("click", () => {
-        if (target1Detected) {
-          playButton1.style.display = "none";
-          videoPlane1.setAttribute('visible', true);
-          video1.play();
+      function playCurrentVideo() {
+        if (currentVideo) {
+          playButton.style.display = "none";
+          currentVideo.play().catch(error => {
+            console.error('Autoplay prevented:', error);
+          });
         }
-      });
+      }
 
-      playButton2.addEventListener("click", () => {
-        if (target2Detected) {
-          playButton2.style.display = "none";
-          videoPlane2.setAttribute('visible', true);
-          video2.play();
-        }
-      });
+      playButton.addEventListener("click", playCurrentVideo);
 
       const sceneEl = document.querySelector('a-scene');
 
       sceneEl.addEventListener('targetFound', (event) => {
-        if (event.target.dataset.targetIndex == "0") {
-          target1Detected = true;
-          playButton1.style.display = video1.paused ? "block" : "none";
-        } else if (event.target.dataset.targetIndex == "1") {
-          target2Detected = true;
-          playButton2.style.display = video2.paused ? "block" : "none";
+        targetDetected = true;
+        const targetIndex = event.target.getAttribute("mindar-image-target").targetIndex;
+
+        if (targetIndex === 0) {
+          currentVideo = video1;
+          videoPlane1.setAttribute('visible', true);
+          videoPlane2.setAttribute('visible', false);
+        } else if (targetIndex === 1) {
+          currentVideo = video2;
+          videoPlane1.setAttribute('visible', false);
+          videoPlane2.setAttribute('visible', true);
+        }
+
+        if (currentVideo && currentVideo.paused) {
+          playButton.style.display = "block";
         }
       });
 
-      sceneEl.addEventListener('targetLost', (event) => {
-        if (event.target.dataset.targetIndex == "0") {
-          target1Detected = false;
-          video1.pause();
-          playButton1.style.display = "block";
-          videoPlane1.setAttribute('visible', false);
-        } else if (event.target.dataset.targetIndex == "1") {
-          target2Detected = false;
-          video2.pause();
-          playButton2.style.display = "block";
-          videoPlane2.setAttribute('visible', false);
+      sceneEl.addEventListener('targetLost', () => {
+        targetDetected = false;
+        playButton.style.display = "block";
+
+        if (currentVideo) {
+          currentVideo.pause();
+          currentVideo.currentTime = 0;
+        }
+
+        videoPlane1.setAttribute('visible', false);
+        videoPlane2.setAttribute('visible', false);
+      });
+
+      document.addEventListener('click', () => {
+        if (targetDetected && currentVideo && currentVideo.paused) {
+          playCurrentVideo();
         }
       });
 
       sceneEl.addEventListener('loaded', () => {
         document.body.style.background = 'none';
-        arScene.style.display = 'block';
+        document.getElementById("ar-scene").style.display = 'block';
       });
     });
   </script>
@@ -175,24 +126,38 @@
     >
       <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
       <a-assets>
-        <video id="vid1" src="assets/asset.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
-        <video id="vid2" src="assets/asset2.mp4" preload="auto" loop crossorigin webkit-playsinline playsinline></video>
+        <video
+          id="vid1"
+          src="assets/asset.mp4"
+          preload="auto"
+          loop
+          crossorigin
+          webkit-playsinline
+          playsinline
+        ></video>
+        <video
+          id="vid2"
+          src="assets/asset2.mp4"
+          preload="auto"
+          loop
+          crossorigin
+          webkit-playsinline
+          playsinline
+        ></video>
       </a-assets>
-
-      <!-- First Target -->
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane id="plane1" width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid1"></a-plane>
+        <a-plane id="video-plane-1" width="1" height="1" position="0 0 0" rotation="0 0 0" visible="false">
+          <a-video src="#vid1"></a-video>
+        </a-plane>
       </a-entity>
-
-      <!-- Second Target -->
       <a-entity mindar-image-target="targetIndex: 1">
-        <a-plane id="plane2" width="1" height="1" position="0 0 0" rotation="0 0 0" blur-video="#vid2"></a-plane>
+        <a-plane id="video-plane-2" width="1" height="1" position="0 0 0" rotation="0 0 0" visible="false">
+          <a-video src="#vid2"></a-video>
+        </a-plane>
       </a-entity>
     </a-scene>
   </div>
-  
-  <!-- Play buttons -->
-  <div id="playButton1" class="play-button"></div>
-  <div id="playButton2" class="play-button"></div>
+  <!-- Play button -->
+  <div id="playButton" class="play-button"></div>
 </body>
 </html>
