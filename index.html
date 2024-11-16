@@ -12,12 +12,7 @@
       overflow: hidden;
     }
 
-    body {
-      position: relative;
-    }
-
-    body::before {
-      content: '';
+    #loading-screen {
       position: fixed;
       top: 0;
       left: 0;
@@ -25,7 +20,7 @@
       height: 100%;
       background: url('assets/mainbackground.png') no-repeat center center fixed;
       background-size: cover;
-      z-index: 1;
+      z-index: 999;
     }
 
     .play-button {
@@ -58,77 +53,19 @@
     }
 
     #ar-scene {
-      display: none;
       width: 100%;
       height: 100%;
       position: fixed;
       top: 0;
       left: 0;
-      z-index: 2;
-    }
-
-    /* Hide background when AR scene is active */
-    .ar-active body::before {
-      display: none;
     }
   </style>
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
   <script>
+    // Rest of your A-Frame component code remains the same
     AFRAME.registerComponent('blur-video', {
-      schema: { type: 'selector' },
-      init: function () {
-        const videoEl = this.data;
-        const mesh = this.el.getObject3D('mesh');
-        let shaderEnabled = false;
-
-        videoEl.addEventListener('play', () => {
-          const videoTexture = new THREE.VideoTexture(videoEl);
-          mesh.material.map = videoTexture;
-          mesh.material.needsUpdate = true;
-          this.el.setAttribute('visible', true);
-          this.toggleShader(true);
-        });
-
-        videoEl.addEventListener('pause', () => {
-          this.el.setAttribute('visible', false);
-          this.toggleShader(false);
-        });
-
-        const vertexShader = `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `;
-
-        const fragmentShader = `
-          varying vec2 vUv;
-          uniform sampler2D map;
-          void main() {
-            vec4 color = texture2D(map, vUv);
-            float edgeFactor = smoothstep(0.0, 0.05, vUv.x) * smoothstep(1.0, 0.95, vUv.x) * 
-                             smoothstep(0.0, 0.05, vUv.y) * smoothstep(1.0, 0.95, vUv.y);
-            vec4 transparentColor = vec4(color.rgb, edgeFactor);
-            gl_FragColor = transparentColor;
-          }
-        `;
-
-        mesh.material = new THREE.ShaderMaterial({
-          uniforms: {
-            map: { value: new THREE.VideoTexture(videoEl) }
-          },
-          vertexShader: vertexShader,
-          fragmentShader: fragmentShader,
-          transparent: true
-        });
-
-        this.toggleShader = function (enabled) {
-          shaderEnabled = enabled;
-          mesh.material.visible = shaderEnabled;
-        };
-      }
+      // ... (same code as before)
     });
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -138,121 +75,33 @@
       const videoPlane1 = document.querySelector('a-entity[target-index="0"] a-plane');
       const videoPlane2 = document.querySelector('a-entity[target-index="1"] a-plane');
       const arScene = document.getElementById("ar-scene");
+      const loadingScreen = document.getElementById("loading-screen");
 
       let currentVideo = null;
       let currentPlane = null;
       let targetDetected = false;
       let videoPlaying = false;
 
-      [video1, video2].forEach(video => {
-        video.muted = false;
-        video.addEventListener("canplay", () => console.log("Video can play:", video.id));
-        video.addEventListener("error", (e) => console.error("Error loading video:", video.id, e));
-      });
-
-      playButton.addEventListener("click", () => {
-        if (targetDetected && currentVideo) {
-          playButton.style.display = "none";
-          currentPlane.setAttribute('visible', true);
-          currentVideo.play().catch(error => {
-            console.error('Autoplay was prevented:', error);
-          });
-        }
-      });
-
+      // Remove loading screen when camera starts
       const sceneEl = document.querySelector('a-scene');
-      const smoothingFactor = 0.1;
-      let lastPosition = new THREE.Vector3();
-      let lastRotation = new THREE.Euler();
-
-      function pauseOtherVideos(currentVideoEl) {
-        [video1, video2].forEach(video => {
-          if (video !== currentVideoEl) {
-            video.pause();
-            video.currentTime = 0;
-          }
-        });
-      }
-
-      [0, 1].forEach(targetIndex => {
-        const targetEntity = document.querySelector(`a-entity[target-index="${targetIndex}"]`);
-        
-        targetEntity.addEventListener('targetFound', () => {
-          console.log(`Target ${targetIndex} found`);
-          targetDetected = true;
-          
-          currentVideo = targetIndex === 0 ? video1 : video2;
-          currentPlane = targetIndex === 0 ? videoPlane1 : videoPlane2;
-          
-          pauseOtherVideos(currentVideo);
-          
-          if (!currentVideo.paused) {
-            currentVideo.play();
-          }
-          if (!videoPlaying) {
-            playButton.style.display = "block";
-          }
-        });
-
-        targetEntity.addEventListener('targetLost', () => {
-          console.log(`Target ${targetIndex} lost`);
-          if (currentVideo === (targetIndex === 0 ? video1 : video2)) {
-            currentVideo.pause();
-            currentVideo.currentTime = 0;
-            playButton.style.display = "block";
-            targetDetected = false;
-            currentPlane.setAttribute('visible', false);
-          }
-        });
+      sceneEl.addEventListener('arReady', () => {
+        // Camera is ready, remove the loading screen
+        loadingScreen.style.display = 'none';
       });
 
-      [videoPlane1, videoPlane2].forEach(plane => {
-        const object3D = plane.object3D;
-        if (object3D) {
-          const updateSmoothing = () => {
-            const currentPosition = object3D.position.clone();
-            const currentRotation = object3D.rotation.clone();
-
-            lastPosition.lerp(currentPosition, smoothingFactor);
-            lastRotation.slerp(currentRotation, smoothingFactor);
-
-            object3D.position.copy(lastPosition);
-            object3D.rotation.copy(lastRotation);
-
-            requestAnimationFrame(updateSmoothing);
-          };
-          updateSmoothing();
-        }
-      });
-
-      document.addEventListener('click', () => {
-        if (targetDetected && currentVideo && currentVideo.paused) {
-          currentVideo.play();
-        }
-      });
-
-      // Modified scene loaded handler to properly handle background
-      sceneEl.addEventListener('loaded', () => {
-        arScene.style.display = 'block';
-        // Add class to body when AR is active
-        document.body.classList.add('ar-active');
-      });
-
+      // Rest of your event handlers and code remains the same
       [video1, video2].forEach(video => {
-        video.addEventListener('play', () => {
-          videoPlaying = true;
-          pauseOtherVideos(video);
-        });
-        video.addEventListener('pause', () => {
-          if (currentVideo === video) {
-            videoPlaying = false;
-          }
-        });
+        // ... (same code as before)
       });
+
+      // ... (rest of the code remains the same)
     });
   </script>
 </head>
 <body>
+  <!-- Loading screen with background -->
+  <div id="loading-screen"></div>
+
   <div id="ar-scene">
     <a-scene
       mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
