@@ -59,30 +59,27 @@
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
   <script>
-    // Register video scaling component
     AFRAME.registerComponent('video-handler', {
       init: function() {
         const el = this.el;
-        const video = document.querySelector(el.getAttribute('material').src);
+        const videoId = el.getAttribute('material').src.substring(1);
+        const video = document.getElementById(videoId);
         
-        // Wait for video metadata to load
+        if (!video) return;
+
         video.addEventListener('loadedmetadata', () => {
           const videoAspectRatio = video.videoWidth / video.videoHeight;
-          const baseScale = 1; // Base scale factor - adjust this value as needed
+          const baseScale = 1;
           
-          // Calculate dimensions while maintaining aspect ratio
           let width, height;
           if (videoAspectRatio > 1) {
-            // Landscape video
             width = baseScale;
             height = baseScale / videoAspectRatio;
           } else {
-            // Portrait video
             width = baseScale * videoAspectRatio;
             height = baseScale;
           }
           
-          // Update plane dimensions
           el.setAttribute('width', width);
           el.setAttribute('height', height);
         });
@@ -92,7 +89,9 @@
     AFRAME.registerComponent('transparent-video', {
       init: function () {
         const mesh = this.el.getObject3D('mesh');
-        const videoEl = this.el.getAttribute('material').src;
+        const videoEl = document.querySelector(this.el.getAttribute('material').src);
+
+        if (!videoEl) return;
 
         const vertexShader = `
           varying vec2 vUv;
@@ -130,13 +129,13 @@
       }
     });
 
-    document.addEventListener("DOMContentLoaded", () => {
+    const startARExperience = () => {
+      const sceneEl = document.querySelector('a-scene');
       const video1 = document.getElementById("vid1");
       const video2 = document.getElementById("vid2");
       const playButton = document.getElementById("playButton");
       const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
       const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
-      const arScene = document.getElementById("ar-scene");
       const loadingScreen = document.getElementById("loading-screen");
 
       let currentVideo = null;
@@ -145,22 +144,10 @@
       let videoPlaying = false;
       let firstPlay = true;
 
-      // Enhanced target tracking setup
       const targets = {
         0: { video: video2, plane: videoPlane2, active: false },
         1: { video: video1, plane: videoPlane1, active: false }
       };
-
-      const sceneEl = document.querySelector('a-scene');
-      
-      sceneEl.addEventListener('arReady', () => {
-        console.log("AR system ready");
-        loadingScreen.style.display = 'none';
-      });
-
-      sceneEl.addEventListener('arError', (ev) => {
-        console.error("AR error:", ev);
-      });
 
       [video1, video2].forEach(video => {
         video.muted = false;
@@ -177,7 +164,7 @@
           if (playPromise) {
             playPromise.catch(error => {
               console.error('Playback failed:', error);
-              playButton.style.display = "block";
+              playButton.style.display = "flex";
             });
           }
         }
@@ -193,7 +180,6 @@
         });
       }
 
-      // Enhanced target tracking events
       [0, 1].forEach(targetIndex => {
         const targetEntity = document.querySelector(`a-entity[target-index="${targetIndex}"]`);
         
@@ -216,7 +202,6 @@
           console.log(`Target ${targetIndex} lost`);
           targets[targetIndex].active = false;
           
-          // Only pause if no other targets are active
           if (!Object.values(targets).some(target => target.active)) {
             if (currentVideo) {
               currentVideo.pause();
@@ -250,7 +235,23 @@
           }
         });
       });
-    });
+
+      sceneEl.addEventListener('arReady', () => {
+        console.log("AR system ready");
+        loadingScreen.style.display = 'none';
+      });
+
+      sceneEl.addEventListener('arError', (ev) => {
+        console.error("AR error:", ev);
+      });
+    };
+
+    // Wait for AFRAME to be ready before starting
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', startARExperience);
+    } else {
+      startARExperience();
+    }
   </script>
 </head>
 <body>
@@ -258,9 +259,8 @@
 
   <div id="ar-scene">
     <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
-      color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
+      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001; uiScanning: #scanning-overlay;"
+      embedded
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
     >
@@ -286,7 +286,6 @@
         ></video>
       </a-assets>
       
-      <!-- Second video (vertical format) -->
       <a-entity mindar-image-target="targetIndex: 0" target-index="0">
         <a-plane 
           video-handler
@@ -298,7 +297,6 @@
         ></a-plane>
       </a-entity>
       
-      <!-- First video (regular format) -->
       <a-entity mindar-image-target="targetIndex: 1" target-index="1">
         <a-plane 
           video-handler
