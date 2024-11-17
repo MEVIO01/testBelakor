@@ -212,22 +212,23 @@
       }
 
       async init() {
-        try {
-          this.loadingText.innerHTML = "Loading videos...";
-          await this.loadVideos();
-          
-          this.loadingText.innerHTML = "Checking camera...";
-          await this.checkCamera();
-          
-          this.loadingText.innerHTML = "Starting AR...";
-          await this.initAR();
-          
-          this.loadingText.innerHTML = "Looking for targets...";
-        } catch (error) {
-          console.error('Initialization error:', error);
-          this.showError(error.message);
-        }
-      }
+  try {
+    this.loadingText.innerHTML = "Loading videos...";
+    // Load videos in background without waiting
+    this.loadVideos().catch(e => console.warn('Video loading warning:', e));
+    
+    this.loadingText.innerHTML = "Checking camera...";
+    await this.checkCamera();
+    
+    // Immediately proceed to AR initialization
+    await this.initAR();
+  } catch (error) {
+    console.error('Initialization error:', error);
+    this.showError(error.message);
+  }
+}
+
+
 
       async loadVideos() {
         const loader1 = new VideoLoader(this.video1, 'assets/asset.mp4');
@@ -262,15 +263,16 @@
 
       initAR() {
         return new Promise((resolve) => {
-          const playButton = document.getElementById("playButton");
-          const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
-          const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
-          const sceneEl = document.querySelector('a-scene');
+    const playButton = document.getElementById("playButton");
+    const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
+    const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
+    const sceneEl = document.querySelector('a-scene');
 
-          sceneEl.addEventListener('arReady', () => {
-            console.log("AR System Ready");
-            resolve();
-          });
+    sceneEl.addEventListener('arReady', () => {
+      console.log("AR System Ready");
+      this.loadingScreen.style.display = "none"; // Hide loading screen immediately when AR is ready
+      resolve();
+    });
 
           sceneEl.addEventListener('arError', (ev) => {
             console.error('AR Error:', ev);
