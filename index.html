@@ -124,41 +124,27 @@
       init: function () {
         const mesh = this.el.getObject3D('mesh');
         const video = this.data.video;
+        const targetIndex = this.el.parentEl.getAttribute('mindar-image-target').targetIndex;
 
+        // Handle video sizing when metadata is loaded
         video.addEventListener('loadedmetadata', () => {
-          const videoRatio = video.videoWidth / video.videoHeight;
+          const aspectRatio = video.videoWidth / video.videoHeight;
           let width, height;
-          const baseSize = 1.5;  // Base size for scaling
-
-          // Get the device/camera aspect ratio
-          const deviceRatio = window.innerWidth / window.innerHeight;
-
-          console.log(`Video dimensions: ${video.videoWidth}x${video.videoHeight}, ratio: ${videoRatio}`);
-          console.log(`Device dimensions: ${window.innerWidth}x${window.innerHeight}, ratio: ${deviceRatio}`);
-
-          if (videoRatio > 1) {
-            // Horizontal video
-            if (videoRatio > deviceRatio) {
-              width = baseSize;
-              height = width / videoRatio;
-            } else {
-              height = baseSize;
-              width = height * videoRatio;
-            }
+          
+          // If video is wider than tall
+          if (aspectRatio > 1) {
+            width = 2;  // Base width for horizontal videos
+            height = width / aspectRatio;
           } else {
-            // Vertical video
-            if (videoRatio < deviceRatio) {
-              height = baseSize;
-              width = height * videoRatio;
-            } else {
-              width = baseSize;
-              height = width / videoRatio;
-            }
+            height = 2;  // Base height for vertical videos
+            width = height * aspectRatio;
           }
-
+          
+          console.log(`Video ${targetIndex} - Original: ${video.videoWidth}x${video.videoHeight}, Ratio: ${aspectRatio}`);
+          console.log(`Setting dimensions: ${width}x${height}`);
+          
           this.el.setAttribute('width', width);
           this.el.setAttribute('height', height);
-          console.log(`Set dimensions: ${width}x${height}`);
         });
 
         const vertexShader = `
