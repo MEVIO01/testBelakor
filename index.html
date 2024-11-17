@@ -124,59 +124,41 @@
       init: function () {
         const mesh = this.el.getObject3D('mesh');
         const video = this.data.video;
-        const sceneEl = document.querySelector('a-scene');
-        const targetIndex = this.el.parentEl.getAttribute('mindar-image-target').targetIndex;
 
-        // Function to calculate dimensions
-        const calculateDimensions = (targetDimensions, videoWidth, videoHeight) => {
-          const targetRatio = targetDimensions.width / targetDimensions.height;
-          const videoRatio = videoWidth / videoHeight;
-          const baseScale = 1.5; // Base scale for the larger dimension
-
+        video.addEventListener('loadedmetadata', () => {
+          const videoRatio = video.videoWidth / video.videoHeight;
           let width, height;
+          const baseSize = 1.5;  // Base size for scaling
 
-          if (targetRatio > 1) { // Horizontal target
-            if (videoRatio > targetRatio) {
-              // Video is wider than target
-              width = baseScale;
-              height = baseScale / videoRatio;
+          // Get the device/camera aspect ratio
+          const deviceRatio = window.innerWidth / window.innerHeight;
+
+          console.log(`Video dimensions: ${video.videoWidth}x${video.videoHeight}, ratio: ${videoRatio}`);
+          console.log(`Device dimensions: ${window.innerWidth}x${window.innerHeight}, ratio: ${deviceRatio}`);
+
+          if (videoRatio > 1) {
+            // Horizontal video
+            if (videoRatio > deviceRatio) {
+              width = baseSize;
+              height = width / videoRatio;
             } else {
-              // Video is taller than target proportionally
-              height = baseScale / targetRatio;
+              height = baseSize;
               width = height * videoRatio;
             }
-          } else { // Vertical target
-            if (videoRatio < targetRatio) {
-              // Video is taller than target
-              height = baseScale;
-              width = baseScale * videoRatio;
+          } else {
+            // Vertical video
+            if (videoRatio < deviceRatio) {
+              height = baseSize;
+              width = height * videoRatio;
             } else {
-              // Video is wider than target proportionally
-              width = baseScale * targetRatio;
+              width = baseSize;
               height = width / videoRatio;
             }
           }
 
-          return { width, height };
-        };
-
-        // Wait for both video metadata and AR system
-        video.addEventListener('loadedmetadata', () => {
-          sceneEl.addEventListener('arReady', () => {
-            const mindARComponent = sceneEl.components['mindar-image'];
-            if (mindARComponent && mindARComponent.controller) {
-              const dimensions = mindARComponent.controller.processor.dimensions[targetIndex];
-              const { width, height } = calculateDimensions(
-                dimensions,
-                video.videoWidth,
-                video.videoHeight
-              );
-              
-              console.log(`Setting dimensions for target ${targetIndex}:`, width, height);
-              this.el.setAttribute('width', width);
-              this.el.setAttribute('height', height);
-            }
-          });
+          this.el.setAttribute('width', width);
+          this.el.setAttribute('height', height);
+          console.log(`Set dimensions: ${width}x${height}`);
         });
 
         const vertexShader = `
