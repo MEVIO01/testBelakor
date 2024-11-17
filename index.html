@@ -21,18 +21,6 @@
       background: url('assets/mainbackground.png') no-repeat center center fixed;
       background-size: cover;
       z-index: 999;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      color: white;
-      font-family: Arial, sans-serif;
-    }
-
-    #loading-text {
-      background: rgba(0,0,0,0.7);
-      padding: 20px;
-      border-radius: 10px;
-      text-align: center;
     }
 
     .play-button {
@@ -67,50 +55,89 @@
       top: 0;
       left: 0;
     }
-
-    #error-message {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(0,0,0,0.8);
-      color: white;
-      padding: 20px;
-      border-radius: 10px;
-      z-index: 1001;
-      display: none;
-      text-align: center;
-    }
-
-    .retry-button {
-      margin-top: 10px;
-      padding: 8px 16px;
-      background: rgba(255,255,255,0.2);
-      border: 1px solid white;
-      color: white;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-
-    .retry-button:hover {
-      background: rgba(255,255,255,0.3);
-    }
   </style>
   <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
+</head>
+<body>
+  <div id="loading-screen"></div>
+
+  <div id="ar-scene">
+    <a-scene
+      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
+      embedded
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: false"
+    >
+      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+      <a-assets timeout="10000">
+        <video
+          id="vid1"
+          src="assets/asset.mp4"
+          preload="metadata"
+          loop
+          crossorigin="anonymous"
+          webkit-playsinline
+          playsinline
+        ></video>
+        <video
+          id="vid2"
+          src="assets/asset2.mp4"
+          preload="metadata"
+          loop
+          crossorigin="anonymous"
+          webkit-playsinline
+          playsinline
+        ></video>
+      </a-assets>
+      
+      <a-entity mindar-image-target="targetIndex: 0" target-index="0">
+        <a-plane 
+          width="1" 
+          height="1.5" 
+          position="0 0 0" 
+          rotation="0 0 0" 
+          material="src: #vid2; transparent: true"
+          transparent-video
+          visible="false"
+        ></a-plane>
+      </a-entity>
+      
+      <a-entity mindar-image-target="targetIndex: 1" target-index="1">
+        <a-plane 
+          width="1.5" 
+          height="1" 
+          position="0 0 0" 
+          rotation="0 0 0" 
+          material="src: #vid1; transparent: true"
+          transparent-video
+          visible="false"
+        ></a-plane>
+      </a-entity>
+    </a-scene>
+  </div>
+  <div id="playButton" class="play-button"></div>
+
   <script>
-    AFRAME.registerComponent('video-handler', {
-      schema: {
-        fadeEdge: { default: 0.1 }
-      },
+    // Video loading check
+    window.addEventListener('load', () => {
+        const video1 = document.getElementById("vid1");
+        const video2 = document.getElementById("vid2");
 
-      init: function() {
-        const el = this.el;
-        const videoEl = document.querySelector(el.getAttribute('material').src);
-        const mesh = el.getObject3D('mesh');
-        const data = this.data;
+        [video1, video2].forEach(video => {
+            video.onerror = (e) => {
+                console.error(`Error loading video ${video.id}:`, e);
+            };
+            
+            console.log(`Video ${video.id} source:`, video.src);
+            video.load();
+        });
+    });
 
-        if (!videoEl) return;
+    AFRAME.registerComponent('transparent-video', {
+      init: function () {
+        const mesh = this.el.getObject3D('mesh');
+        const videoEl = document.querySelector(this.el.getAttribute('material').src);
 
         const vertexShader = `
           varying vec2 vUv;
@@ -123,305 +150,135 @@
         const fragmentShader = `
           varying vec2 vUv;
           uniform sampler2D map;
-          uniform float fadeEdge;
-          
           void main() {
             vec4 color = texture2D(map, vUv);
-            float fadeX = smoothstep(0.0, fadeEdge, vUv.x) * smoothstep(1.0, 1.0 - fadeEdge, vUv.x);
-            float fadeY = smoothstep(0.0, fadeEdge, vUv.y) * smoothstep(1.0, 1.0 - fadeEdge, vUv.y);
-            float fade = fadeX * fadeY;
-            gl_FragColor = vec4(color.rgb, color.a * fade);
+            float edgeFactor = smoothstep(0.0, 0.1, vUv.x) * smoothstep(1.0, 0.9, vUv.x) * 
+                             smoothstep(0.0, 0.1, vUv.y) * smoothstep(1.0, 0.9, vUv.y);
+            gl_FragColor = vec4(color.rgb, color.a * edgeFactor);
           }
         `;
 
         this.shaderMaterial = new THREE.ShaderMaterial({
           uniforms: {
-            map: { value: null },
-            fadeEdge: { value: data.fadeEdge }
+            map: { value: null }
           },
           vertexShader: vertexShader,
           fragmentShader: fragmentShader,
           transparent: true
         });
 
-        videoEl.addEventListener('loadedmetadata', () => {
-          const texture = new THREE.VideoTexture(videoEl);
-          texture.minFilter = THREE.LinearFilter;
-          texture.magFilter = THREE.LinearFilter;
-          this.shaderMaterial.uniforms.map.value = texture;
-          if (mesh) mesh.material = this.shaderMaterial;
+        videoEl.addEventListener('playing', () => {
+          const videoTexture = new THREE.VideoTexture(videoEl);
+          this.shaderMaterial.uniforms.map.value = videoTexture;
+          mesh.material = this.shaderMaterial;
         });
       }
     });
 
-    class VideoLoader {
-      constructor(videoEl, src, maxRetries = 3) {
-        this.videoEl = videoEl;
-        this.src = src;
-        this.maxRetries = maxRetries;
-        this.retryCount = 0;
-      }
+    document.addEventListener("DOMContentLoaded", () => {
+      const video1 = document.getElementById("vid1");
+      const video2 = document.getElementById("vid2");
+      const playButton = document.getElementById("playButton");
+      const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
+      const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
+      const arScene = document.getElementById("ar-scene");
+      const loadingScreen = document.getElementById("loading-screen");
 
-      load() {
-        return new Promise((resolve, reject) => {
-          const handleSuccess = () => {
-            this.videoEl.removeEventListener('loadeddata', handleSuccess);
-            this.videoEl.removeEventListener('error', handleError);
-            resolve();
-          };
+      let currentVideo = null;
+      let currentPlane = null;
+      let targetDetected = false;
+      let videoPlaying = false;
+      let firstPlay = true;
 
-          const handleError = (error) => {
-            this.videoEl.removeEventListener('loadeddata', handleSuccess);
-            this.videoEl.removeEventListener('error', handleError);
-            
-            if (this.retryCount < this.maxRetries) {
-              this.retryCount++;
-              console.log(`Retrying video load (${this.retryCount}/${this.maxRetries})`);
-                setTimeout(() => {
-                this.load().then(resolve).catch(reject);
-              }, 1000 * this.retryCount);
-            } else {
-              reject(new Error(`Failed to load video after ${this.maxRetries} attempts`));
-            }
-          };
+      const sceneEl = document.querySelector('a-scene');
+      sceneEl.addEventListener('arReady', () => {
+        console.log("AR System Ready");
+        loadingScreen.style.display = 'none';
+      });
 
-          this.videoEl.addEventListener('loadeddata', handleSuccess);
-          this.videoEl.addEventListener('error', handleError);
+      sceneEl.addEventListener('arError', (ev) => {
+        console.error('AR Error:', ev);
+      });
 
-          this.videoEl.muted = true;
-          this.videoEl.playsInline = true;
-          this.videoEl.src = this.src;
-          this.videoEl.load();
-        });
-      }
-    }
+      [video1, video2].forEach(video => {
+        video.muted = false;
+        video.addEventListener("canplay", () => console.log("Video can play:", video.id));
+        video.addEventListener("error", (e) => console.error("Error loading video:", video.id, e));
+      });
 
-    class ARExperience {
-      constructor() {
-        this.loadingText = document.getElementById("loading-text");
-        this.errorMessage = document.getElementById("error-message");
-        this.loadingScreen = document.getElementById("loading-screen");
-        this.video1 = document.getElementById("vid1");
-        this.video2 = document.getElementById("vid2");
-        this.currentVideo = null;
-        this.currentPlane = null;
-        this.targetDetected = false;
-        this.videoPlaying = false;
-
-        this.init();
-      }
-
-      async init() {
-  try {
-    this.loadingText.innerHTML = "Loading videos...";
-    // Load videos in background without waiting
-    this.loadVideos().catch(e => console.warn('Video loading warning:', e));
-    
-    this.loadingText.innerHTML = "Checking camera...";
-    await this.checkCamera();
-    
-    // Immediately proceed to AR initialization
-    await this.initAR();
-  } catch (error) {
-    console.error('Initialization error:', error);
-    this.showError(error.message);
-  }
-}
-
-
-
-      async loadVideos() {
-        const loader1 = new VideoLoader(this.video1, 'assets/asset.mp4');
-        const loader2 = new VideoLoader(this.video2, 'assets/asset2.mp4');
-        
-        await Promise.all([
-          loader1.load(),
-          loader2.load()
-        ]);
-      }
-
-      async checkCamera() {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          stream.getTracks().forEach(track => track.stop());
-        } catch (error) {
-          throw new Error('Camera access denied. Please allow camera access and refresh.');
+      playButton.addEventListener("click", () => {
+        if (targetDetected && currentVideo) {
+          playButton.style.display = "none";
+          currentPlane.setAttribute('visible', true);
+          
+          const playPromise = currentVideo.play();
+          if (playPromise) {
+            playPromise.catch(error => {
+              console.error('Playback failed:', error);
+              playButton.style.display = "flex";
+            });
+          }
         }
-      }
+      });
 
-      showError(message) {
-        this.loadingScreen.style.display = "none";
-        this.errorMessage.innerHTML = `
-          ${message}
-          <br>
-          <button class="retry-button" onclick="window.location.reload()">
-            Retry
-          </button>
-        `;
-        this.errorMessage.style.display = "block";
-      }
-
-      initAR() {
-        return new Promise((resolve) => {
-    const playButton = document.getElementById("playButton");
-    const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
-    const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
-    const sceneEl = document.querySelector('a-scene');
-
-    sceneEl.addEventListener('arReady', () => {
-      console.log("AR System Ready");
-      this.loadingScreen.style.display = "none"; // Hide loading screen immediately when AR is ready
-      resolve();
-    });
-
-          sceneEl.addEventListener('arError', (ev) => {
-            console.error('AR Error:', ev);
-            this.showError("AR system error. Please refresh the page.");
-          });
-
-          [0, 1].forEach(targetIndex => {
-            const targetEntity = document.querySelector(`a-entity[target-index="${targetIndex}"]`);
-            
-            targetEntity.addEventListener('targetFound', () => {
-              console.log(`Target ${targetIndex} found`);
-              this.loadingScreen.style.display = "none";
-              this.targetDetected = true;
-              
-              this.currentVideo = targetIndex === 0 ? this.video2 : this.video1;
-              this.currentPlane = targetIndex === 0 ? videoPlane2 : videoPlane1;
-              
-              this.pauseOtherVideos();
-              
-              if (!this.videoPlaying) {
-                playButton.style.display = "flex";
-              }
-            });
-
-            targetEntity.addEventListener('targetLost', () => {
-              if (this.currentVideo === (targetIndex === 0 ? this.video2 : this.video1)) {
-                this.currentVideo.pause();
-                this.currentVideo.currentTime = 0;
-                this.currentVideo.muted = true;
-                playButton.style.display = "none";
-                this.targetDetected = false;
-                this.currentPlane.setAttribute('visible', false);
-              }
-            });
-          });
-
-          playButton.addEventListener("click", () => {
-            if (this.targetDetected && this.currentVideo) {
-              playButton.style.display = "none";
-              this.currentPlane.setAttribute('visible', true);
-              this.currentVideo.muted = false;
-              
-              this.currentVideo.play().catch(error => {
-                console.error('Playback failed:', error);
-                playButton.style.display = "flex";
-              });
-            }
-          });
-
-          [this.video1, this.video2].forEach(video => {
-            video.addEventListener('play', () => {
-              this.videoPlaying = true;
-              this.pauseOtherVideos();
-            });
-            
-            video.addEventListener('pause', () => {
-              if (this.currentVideo === video) {
-                this.videoPlaying = false;
-              }
-            });
-
-            video.addEventListener('ended', () => {
-              if (this.currentVideo === video) {
-                this.videoPlaying = false;
-                playButton.style.display = "flex";
-              }
-            });
-          });
-        });
-      }
-
-      pauseOtherVideos() {
-        [this.video1, this.video2].forEach(video => {
-          if (video !== this.currentVideo) {
+      function pauseOtherVideos(currentVideoEl) {
+        [video1, video2].forEach(video => {
+          if (video !== currentVideoEl) {
             video.pause();
             video.currentTime = 0;
-            video.muted = true;
           }
         });
       }
-    }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      new ARExperience();
+      [0, 1].forEach(targetIndex => {
+        const targetEntity = document.querySelector(`a-entity[target-index="${targetIndex}"]`);
+        
+        targetEntity.addEventListener('targetFound', () => {
+          console.log(`Target ${targetIndex} found`);
+          targetDetected = true;
+          
+          currentVideo = targetIndex === 0 ? video2 : video1;
+          currentPlane = targetIndex === 0 ? videoPlane2 : videoPlane1;
+          
+          pauseOtherVideos(currentVideo);
+          
+          if (!videoPlaying) {
+            playButton.style.display = "flex";
+          }
+        });
+
+        targetEntity.addEventListener('targetLost', () => {
+          console.log(`Target ${targetIndex} lost`);
+          if (currentVideo === (targetIndex === 0 ? video2 : video1)) {
+            currentVideo.pause();
+            currentVideo.currentTime = 0;
+            playButton.style.display = "none";
+            targetDetected = false;
+            currentPlane.setAttribute('visible', false);
+          }
+        });
+      });
+
+      [video1, video2].forEach(video => {
+        video.addEventListener('play', () => {
+          videoPlaying = true;
+          pauseOtherVideos(video);
+        });
+        
+        video.addEventListener('pause', () => {
+          if (currentVideo === video) {
+            videoPlaying = false;
+          }
+        });
+
+        video.addEventListener('ended', () => {
+          if (currentVideo === video) {
+            videoPlaying = false;
+            playButton.style.display = "flex";
+          }
+        });
+      });
     });
   </script>
-</head>
-<body>
-  <div id="loading-screen">
-    <div id="loading-text">Initializing...</div>
-  </div>
-
-  <div id="error-message"></div>
-
-  <div id="ar-scene">
-    <a-scene
-      mindar-image="imageTargetSrc: ./targets.mind; filterMinCF:0.0001; filterBeta:0.001"
-      embedded
-      vr-mode-ui="enabled: false"
-      device-orientation-permission-ui="enabled: false"
-      loading-screen="enabled: false"
-    >
-      <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-      <a-assets timeout="30000">
-        <video
-          id="vid1"
-          preload="metadata"
-          playsinline
-          webkit-playsinline
-          crossorigin="anonymous"
-          loop
-          muted
-        ></video>
-        <video
-          id="vid2"
-          preload="metadata"
-          playsinline
-          webkit-playsinline
-          crossorigin="anonymous"
-          loop
-          muted
-        ></video>
-      </a-assets>
-      
-      <a-entity mindar-image-target="targetIndex: 0" target-index="0">
-        <a-plane 
-          width="1" 
-          height="1.5" 
-          position="0 0 0" 
-          rotation="0 0 0" 
-          material="src: #vid2; transparent: true"
-          video-handler="fadeEdge: 0.1"
-          visible="false"
-        ></a-plane>
-      </a-entity>
-      
-      <a-entity mindar-image-target="targetIndex: 1" target-index="1">
-        <a-plane 
-          width="1.5" 
-          height="1" 
-          position="0 0 0" 
-          rotation="0 0 0" 
-          material="src: #vid1; transparent: true"
-          video-handler="fadeEdge: 0.1"
-          visible="false"
-        ></a-plane>
-      </a-entity>
-    </a-scene>
-  </div>
-  <div id="playButton" class="play-button"></div>
 </body>
 </html>
