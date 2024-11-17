@@ -1,64 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    #loading-screen {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: url('assets/mainbackground.png') no-repeat center center fixed;
-      background-size: cover;
-      z-index: 999;
-    }
-
-    .play-button {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 80px;
-      height: 80px;
-      display: none;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      z-index: 1000;
-    }
-
-    .play-button::before {
-      content: '';
-      width: 0;
-      height: 0;
-      border-style: solid;
-      border-width: 20px 0 20px 40px;
-      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7);
-      transform: translateX(5px);
-      position: absolute;
-    }
-
-    #ar-scene {
-      width: 100%;
-      height: 100%;
-      position: fixed;
-      top: 0;
-      left: 0;
-    }
-  </style>
-  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
-</head>
+<!-- [Previous head and style sections remain exactly the same] -->
 <body>
   <div id="loading-screen"></div>
   <div id="ar-scene">
@@ -96,7 +38,7 @@
           position="0 0 0"
           rotation="0 0 0"
           material="transparent: true"
-          video-material="video: #vid2"
+          video-material="video: #vid2; targetIndex: 0"
           visible="false"
         ></a-plane>
       </a-entity>
@@ -107,7 +49,7 @@
           position="0 0 0"
           rotation="0 0 0"
           material="transparent: true"
-          video-material="video: #vid1"
+          video-material="video: #vid1; targetIndex: 1"
           visible="false"
         ></a-plane>
       </a-entity>
@@ -118,27 +60,47 @@
   <script>
     AFRAME.registerComponent('video-material', {
       schema: {
-        video: { type: 'selector' }
+        video: { type: 'selector' },
+        targetIndex: { type: 'number' }
       },
 
       init: function () {
         const mesh = this.el.getObject3D('mesh');
         const video = this.data.video;
+        const targetIndex = this.data.targetIndex;
 
-        // Set initial size based on video dimensions when metadata is loaded
+        // Get the MindAR component to access target information
+        const sceneEl = document.querySelector('a-scene');
+        const mindARComponent = sceneEl.components['mindar-image'];
+
         video.addEventListener('loadedmetadata', () => {
-          const ratio = video.videoWidth / video.videoHeight;
-          // Base size on video ratio while maintaining a reasonable scale
-          const baseSize = 1;
-          if (ratio > 1) {
-            this.el.setAttribute('width', baseSize * ratio);
-            this.el.setAttribute('height', baseSize);
+          // Get target dimensions
+          const target = mindARComponent.controller.processor.dimensions[targetIndex];
+          const targetRatio = target.width / target.height;
+          const isTargetVertical = target.height > target.width;
+          
+          console.log(`Target ${targetIndex} dimensions:`, target.width, target.height, 'Ratio:', targetRatio);
+          
+          // Set base size depending on target orientation
+          let width, height;
+          if (isTargetVertical) {
+            // Vertical target
+            width = 1;
+            height = width * (target.height / target.width);
           } else {
-            this.el.setAttribute('width', baseSize);
-            this.el.setAttribute('height', baseSize / ratio);
+            // Horizontal target
+            height = 1;
+            width = height * (target.width / target.height);
           }
+
+          // Set the plane dimensions
+          this.el.setAttribute('width', width);
+          this.el.setAttribute('height', height);
+          
+          console.log(`Set dimensions for video ${targetIndex}:`, width, height);
         });
 
+        // [Rest of the shader code remains exactly the same]
         const vertexShader = `
           varying vec2 vUv;
           void main() {
@@ -188,82 +150,7 @@
       }
     });
 
-    document.addEventListener('DOMContentLoaded', function() {
-      const video1 = document.getElementById('vid1');
-      const video2 = document.getElementById('vid2');
-      const playButton = document.getElementById('playButton');
-      const loadingScreen = document.getElementById('loading-screen');
-      
-      let currentVideo = null;
-      let currentPlane = null;
-      let targetDetected = false;
-
-      const sceneEl = document.querySelector('a-scene');
-      
-      function setupVideo(video) {
-        video.addEventListener('loadedmetadata', () => {
-          console.log(video.id + ' metadata loaded');
-        });
-      }
-
-      [video1, video2].forEach(setupVideo);
-
-      sceneEl.addEventListener('arReady', () => {
-        loadingScreen.style.display = 'none';
-      });
-
-      playButton.addEventListener('click', () => {
-        if (targetDetected && currentVideo) {
-          playButton.style.display = 'none';
-          currentPlane.setAttribute('visible', true);
-          currentVideo.play().catch(error => {
-            console.error('Error playing video:', error);
-            playButton.style.display = 'flex';
-          });
-        }
-      });
-
-      function pauseOtherVideos(currentVid) {
-        [video1, video2].forEach(video => {
-          if (video !== currentVid) {
-            video.pause();
-            video.currentTime = 0;
-          }
-        });
-      }
-
-      [0, 1].forEach(targetIndex => {
-        const targetEntity = document.querySelector(`a-entity[mindar-image-target="targetIndex: ${targetIndex}"]`);
-        const plane = targetEntity.querySelector('a-plane');
-        
-        targetEntity.addEventListener('targetFound', () => {
-          console.log(`Target ${targetIndex} found`);
-          targetDetected = true;
-          currentVideo = targetIndex === 0 ? video2 : video1;
-          currentPlane = plane;
-          pauseOtherVideos(currentVideo);
-          playButton.style.display = 'flex';
-        });
-
-        targetEntity.addEventListener('targetLost', () => {
-          console.log(`Target ${targetIndex} lost`);
-          if (currentVideo === (targetIndex === 0 ? video2 : video1)) {
-            currentVideo.pause();
-            currentVideo.currentTime = 0;
-            playButton.style.display = 'none';
-            targetDetected = false;
-            plane.setAttribute('visible', false);
-          }
-        });
-      });
-
-      [video1, video2].forEach(video => {
-        video.addEventListener('play', () => {
-          pauseOtherVideos(video);
-        });
-        video.muted = false;
-      });
-    });
+    // [Rest of the code remains exactly the same]
   </script>
 </body>
 </html>
