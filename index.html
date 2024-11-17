@@ -1,7 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
-<!-- [Previous head section remains the same] -->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
 
+    #loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url('assets/mainbackground.png') no-repeat center center fixed;
+      background-size: cover;
+      z-index: 999;
+    }
+
+    .play-button {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      display: none;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      z-index: 1000;
+    }
+
+    .play-button::before {
+      content: '';
+      width: 0;
+      height: 0;
+      border-style: solid;
+      border-width: 20px 0 20px 40px;
+      border-color: transparent transparent transparent rgba(255, 255, 255, 0.7);
+      transform: translateX(5px);
+      position: absolute;
+    }
+
+    #ar-scene {
+      width: 100%;
+      height: 100%;
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
+  </style>
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.0/dist/mindar-image-aframe.prod.js"></script>
+</head>
 <body>
   <div id="loading-screen"></div>
   <div id="ar-scene">
@@ -41,7 +98,6 @@
           rotation="0 0 0"
           material="transparent: true"
           video-material="video: #vid2"
-          dynamic-video-size="video: #vid2; targetIndex: 0"
           visible="false"
         ></a-plane>
       </a-entity>
@@ -54,7 +110,6 @@
           rotation="0 0 0"
           material="transparent: true"
           video-material="video: #vid1"
-          dynamic-video-size="video: #vid1; targetIndex: 1"
           visible="false"
         ></a-plane>
       </a-entity>
@@ -63,97 +118,140 @@
   <div id="playButton" class="play-button"></div>
 
   <script>
-    // [Previous video-material component remains the same]
-
-    // Add new component for dynamic video sizing
-    AFRAME.registerComponent('dynamic-video-size', {
+    AFRAME.registerComponent('video-material', {
       schema: {
-        video: { type: 'selector' },
-        targetIndex: { type: 'number' }
+        video: { type: 'selector' }
       },
 
-      init: function() {
-        this.video = this.data.video;
-        this.targetIndex = this.data.targetIndex;
-        this.controller = null;
-        this.processVideo = this.processVideo.bind(this);
+      init: function () {
+        const mesh = this.el.getObject3D('mesh');
+        const video = this.data.video;
 
-        // Wait for video metadata to load
-        if (this.video.readyState >= 2) {
-          this.processVideo();
-        } else {
-          this.video.addEventListener('loadedmetadata', this.processVideo);
-        }
+        const vertexShader = `
+          varying vec2 vUv;
+          void main() {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `;
 
-        // Get the MindAR controller
-        const sceneEl = document.querySelector('a-scene');
-        sceneEl.addEventListener('arReady', () => {
-          const mindARComponent = sceneEl.components['mindar-image'];
-          this.controller = mindARComponent.controller;
+        const fragmentShader = `
+          varying vec2 vUv;
+          uniform sampler2D videoTexture;
+          
+          void main() {
+            vec4 color = texture2D(videoTexture, vUv);
+            
+            // Calculate distance from edges
+            float dx = min(vUv.x, 1.0 - vUv.x);
+            float dy = min(vUv.y, 1.0 - vUv.y);
+            float edgeDistance = min(dx, dy);
+            
+            // Create soft edges
+            float fadeWidth = 0.15; // Adjust this value to control fade width
+            float opacity = smoothstep(0.0, fadeWidth, edgeDistance);
+            
+            // Apply overall transparency
+            float globalOpacity = 0.9; // Adjust this value for overall transparency
+            
+            gl_FragColor = vec4(color.rgb, color.a * opacity * globalOpacity);
+          }
+        `;
+
+        const videoTexture = new THREE.VideoTexture(video);
+        videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.magFilter = THREE.LinearFilter;
+        videoTexture.format = THREE.RGBAFormat;
+
+        const material = new THREE.ShaderMaterial({
+          vertexShader: vertexShader,
+          fragmentShader: fragmentShader,
+          uniforms: {
+            videoTexture: { value: videoTexture }
+          },
+          transparent: true
         });
 
-        // Update size on each frame
-        this.el.sceneEl.addEventListener('renderstart', () => {
-          this.updateSize();
-        });
-      },
-
-      processVideo: function() {
-        // Store original video dimensions
-        this.videoRatio = this.video.videoWidth / this.video.videoHeight;
-        console.log(`Video ${this.targetIndex} ratio: ${this.videoRatio}`);
-      },
-
-      updateSize: function() {
-        if (!this.controller || !this.videoRatio) return;
-
-        // Get the target's projected size in the camera view
-        const projectionMatrix = this.controller.getProjectionMatrix();
-        const targetMatrix = this.controller.getTargetWorldMatrix(this.targetIndex);
-        
-        if (!targetMatrix) return;
-
-        // Calculate the projected size of the target
-        const position = new THREE.Vector3();
-        position.setFromMatrixPosition(targetMatrix);
-        
-        // Get distance from camera to target
-        const distance = position.length();
-        
-        // Calculate the visible size of the target at the current distance
-        const fov = 2 * Math.atan(1 / projectionMatrix.elements[5]);
-        const visibleHeight = 2 * Math.tan(fov / 2) * distance;
-        const visibleWidth = visibleHeight * (window.innerWidth / window.innerHeight);
-
-        // Get target dimensions from MindAR
-        const targetDimensions = this.controller.getTargetDimensions(this.targetIndex);
-        if (!targetDimensions) return;
-
-        // Calculate scale factors
-        const targetRatio = targetDimensions.width / targetDimensions.height;
-        let width, height;
-
-        if (this.videoRatio > targetRatio) {
-          // Video is wider than target
-          width = targetDimensions.width;
-          height = width / this.videoRatio;
-        } else {
-          // Video is taller than target
-          height = targetDimensions.height;
-          width = height * this.videoRatio;
-        }
-
-        // Apply the new dimensions
-        this.el.setAttribute('width', width);
-        this.el.setAttribute('height', height);
-      },
-
-      remove: function() {
-        this.video.removeEventListener('loadedmetadata', this.processVideo);
+        mesh.material = material;
       }
     });
 
-    // [Previous DOMContentLoaded event handler remains the same]
+    document.addEventListener('DOMContentLoaded', function() {
+      const video1 = document.getElementById('vid1');
+      const video2 = document.getElementById('vid2');
+      const playButton = document.getElementById('playButton');
+      const loadingScreen = document.getElementById('loading-screen');
+      
+      let currentVideo = null;
+      let currentPlane = null;
+      let targetDetected = false;
+
+      const sceneEl = document.querySelector('a-scene');
+      
+      function setupVideo(video) {
+        video.addEventListener('loadedmetadata', () => {
+          console.log(video.id + ' metadata loaded');
+        });
+      }
+
+      [video1, video2].forEach(setupVideo);
+
+      sceneEl.addEventListener('arReady', () => {
+        loadingScreen.style.display = 'none';
+      });
+
+      playButton.addEventListener('click', () => {
+        if (targetDetected && currentVideo) {
+          playButton.style.display = 'none';
+          currentPlane.setAttribute('visible', true);
+          currentVideo.play().catch(error => {
+            console.error('Error playing video:', error);
+            playButton.style.display = 'flex';
+          });
+        }
+      });
+
+      function pauseOtherVideos(currentVid) {
+        [video1, video2].forEach(video => {
+          if (video !== currentVid) {
+            video.pause();
+            video.currentTime = 0;
+          }
+        });
+      }
+
+      [0, 1].forEach(targetIndex => {
+        const targetEntity = document.querySelector(`a-entity[mindar-image-target="targetIndex: ${targetIndex}"]`);
+        const plane = targetEntity.querySelector('a-plane');
+        
+        targetEntity.addEventListener('targetFound', () => {
+          console.log(`Target ${targetIndex} found`);
+          targetDetected = true;
+          currentVideo = targetIndex === 0 ? video2 : video1;
+          currentPlane = plane;
+          pauseOtherVideos(currentVideo);
+          playButton.style.display = 'flex';
+        });
+
+        targetEntity.addEventListener('targetLost', () => {
+          console.log(`Target ${targetIndex} lost`);
+          if (currentVideo === (targetIndex === 0 ? video2 : video1)) {
+            currentVideo.pause();
+            currentVideo.currentTime = 0;
+            playButton.style.display = 'none';
+            targetDetected = false;
+            plane.setAttribute('visible', false);
+          }
+        });
+      });
+
+      [video1, video2].forEach(video => {
+        video.addEventListener('play', () => {
+          pauseOtherVideos(video);
+        });
+        video.muted = false;
+      });
+    });
   </script>
 </body>
 </html>
