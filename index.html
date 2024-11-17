@@ -91,108 +91,73 @@
       </a-assets>
 
       <a-entity mindar-image-target="targetIndex: 0">
-        <a-plane
+        <a-video
           id="video-plane-0"
+          src="#vid2"
           position="0 0 0"
-          rotation="0 0 0"
-          material="transparent: true"
-          video-material="video: #vid2"
+          scale="2 2 2"
+          material="transparent: true; opacity: 0.9"
+          width="1.6"
+          height="0.9"
+          vidhandler="video: #vid2"
           visible="false"
-        ></a-plane>
+        ></a-video>
       </a-entity>
 
       <a-entity mindar-image-target="targetIndex: 1">
-        <a-plane
+        <a-video
           id="video-plane-1"
+          src="#vid1"
           position="0 0 0"
-          rotation="0 0 0"
-          material="transparent: true"
-          video-material="video: #vid1"
+          scale="2 2 2"
+          material="transparent: true; opacity: 0.9"
+          width="1.6"
+          height="0.9"
+          vidhandler="video: #vid1"
           visible="false"
-        ></a-plane>
+        ></a-video>
       </a-entity>
     </a-scene>
   </div>
   <div id="playButton" class="play-button"></div>
 
   <script>
-    AFRAME.registerComponent('video-material', {
+    AFRAME.registerComponent('vidhandler', {
       schema: {
         video: { type: 'selector' }
       },
-
+      
       init: function () {
-        const mesh = this.el.getObject3D('mesh');
-        const video = this.data.video;
-        const targetIndex = this.el.parentEl.getAttribute('mindar-image-target').targetIndex;
-
-        // Handle video sizing when metadata is loaded
-        video.addEventListener('loadedmetadata', () => {
-          const aspectRatio = video.videoWidth / video.videoHeight;
-          let width, height;
-          
-          // If video is wider than tall
-          if (aspectRatio > 1) {
-            width = 2;  // Base width for horizontal videos
-            height = width / aspectRatio;
-          } else {
-            height = 2;  // Base height for vertical videos
-            width = height * aspectRatio;
-          }
-          
-          console.log(`Video ${targetIndex} - Original: ${video.videoWidth}x${video.videoHeight}, Ratio: ${aspectRatio}`);
-          console.log(`Setting dimensions: ${width}x${height}`);
-          
-          this.el.setAttribute('width', width);
-          this.el.setAttribute('height', height);
+        this.video = this.data.video;
+        this.el.sceneEl.addEventListener('arReady', () => {
+          console.log('AR is ready');
         });
 
-        const vertexShader = `
-          varying vec2 vUv;
-          void main() {
-            vUv = uv;
-            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-          }
-        `;
-
-        const fragmentShader = `
-          varying vec2 vUv;
-          uniform sampler2D videoTexture;
-          
-          void main() {
-            vec4 color = texture2D(videoTexture, vUv);
+        // Create the fade shader
+        const material = this.el.getObject3D('mesh').material;
+        material.onBeforeCompile = (shader) => {
+          shader.fragmentShader = shader.fragmentShader.replace(
+            'void main() {',
+            `
+            float createFade(vec2 uv) {
+              float dx = min(uv.x, 1.0 - uv.x);
+              float dy = min(uv.y, 1.0 - uv.y);
+              float edge = min(dx, dy);
+              return smoothstep(0.0, 0.15, edge);
+            }
             
-            // Calculate distance from edges
-            float dx = min(vUv.x, 1.0 - vUv.x);
-            float dy = min(vUv.y, 1.0 - vUv.y);
-            float edgeDistance = min(dx, dy);
-            
-            // Create soft edges
-            float fadeWidth = 0.15;
-            float opacity = smoothstep(0.0, fadeWidth, edgeDistance);
-            
-            // Apply overall transparency
-            float globalOpacity = 0.9;
-            
-            gl_FragColor = vec4(color.rgb, color.a * opacity * globalOpacity);
-          }
-        `;
-
-        const videoTexture = new THREE.VideoTexture(video);
-        videoTexture.minFilter = THREE.LinearFilter;
-        videoTexture.magFilter = THREE.LinearFilter;
-        videoTexture.format = THREE.RGBAFormat;
-
-        const material = new THREE.ShaderMaterial({
-          vertexShader: vertexShader,
-          fragmentShader: fragmentShader,
-          uniforms: {
-            videoTexture: { value: videoTexture }
-          },
-          transparent: true
-        });
-
-        mesh.material = material;
+            void main() {
+            `
+          ).replace(
+            'gl_FragColor = vec4( outgoingLight, diffuseColor.a );',
+            `
+            float fadeAlpha = createFade(vUv);
+            gl_FragColor = vec4( outgoingLight, diffuseColor.a * fadeAlpha * 0.9);
+            `
+          );
+        };
+        material.transparent = true;
+        material.needsUpdate = true;
       }
     });
 
@@ -208,14 +173,6 @@
 
       const sceneEl = document.querySelector('a-scene');
       
-      function setupVideo(video) {
-        video.addEventListener('loadedmetadata', () => {
-          console.log(video.id + ' metadata loaded');
-        });
-      }
-
-      [video1, video2].forEach(setupVideo);
-
       sceneEl.addEventListener('arReady', () => {
         loadingScreen.style.display = 'none';
       });
@@ -242,7 +199,7 @@
 
       [0, 1].forEach(targetIndex => {
         const targetEntity = document.querySelector(`a-entity[mindar-image-target="targetIndex: ${targetIndex}"]`);
-        const plane = targetEntity.querySelector('a-plane');
+        const plane = targetEntity.querySelector('a-video');
         
         targetEntity.addEventListener('targetFound', () => {
           console.log(`Target ${targetIndex} found`);
