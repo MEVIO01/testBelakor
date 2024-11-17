@@ -207,7 +207,6 @@
         this.currentPlane = null;
         this.targetDetected = false;
         this.videoPlaying = false;
-        this.arInitialized = false;
 
         this.init();
       }
@@ -223,10 +222,7 @@
           this.loadingText.innerHTML = "Starting AR...";
           await this.initAR();
           
-          // Only update the loading text if AR hasn't been initialized
-          if (!this.arInitialized) {
-            this.loadingText.innerHTML = "Looking for targets...";
-          }
+          this.loadingText.innerHTML = "Looking for targets...";
         } catch (error) {
           console.error('Initialization error:', error);
           this.showError(error.message);
@@ -234,17 +230,13 @@
       }
 
       async loadVideos() {
-        try {
-          const loader1 = new VideoLoader(this.video1, 'assets/asset.mp4');
-          const loader2 = new VideoLoader(this.video2, 'assets/asset2.mp4');
-          
-          await Promise.all([
-            loader1.load(),
-            loader2.load()
-          ]);
-        } catch (error) {
-          throw new Error('Failed to load videos. Please check your connection and try again.');
-        }
+        const loader1 = new VideoLoader(this.video1, 'assets/asset.mp4');
+        const loader2 = new VideoLoader(this.video2, 'assets/asset2.mp4');
+        
+        await Promise.all([
+          loader1.load(),
+          loader2.load()
+        ]);
       }
 
       async checkCamera() {
@@ -269,31 +261,20 @@
       }
 
       initAR() {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           const playButton = document.getElementById("playButton");
           const videoPlane1 = document.querySelector('a-entity[target-index="1"] a-plane');
           const videoPlane2 = document.querySelector('a-entity[target-index="0"] a-plane');
           const sceneEl = document.querySelector('a-scene');
 
-          // Add timeout for AR initialization
-          const arTimeout = setTimeout(() => {
-            if (!this.arInitialized) {
-              reject(new Error('AR initialization timed out. Please refresh the page.'));
-            }
-          }, 30000); // 30 second timeout
-
           sceneEl.addEventListener('arReady', () => {
             console.log("AR System Ready");
-            this.arInitialized = true;
-            clearTimeout(arTimeout);
-            this.loadingText.innerHTML = "Looking for targets...";
             resolve();
           });
 
           sceneEl.addEventListener('arError', (ev) => {
             console.error('AR Error:', ev);
-            clearTimeout(arTimeout);
-            reject(new Error("AR system error. Please refresh the page."));
+            this.showError("AR system error. Please refresh the page.");
           });
 
           [0, 1].forEach(targetIndex => {
@@ -315,7 +296,6 @@
             });
 
             targetEntity.addEventListener('targetLost', () => {
-              console.log(`Target ${targetIndex} lost`);
               if (this.currentVideo === (targetIndex === 0 ? this.video2 : this.video1)) {
                 this.currentVideo.pause();
                 this.currentVideo.currentTime = 0;
@@ -327,41 +307,37 @@
             });
           });
 
-          this.setupVideoEventListeners(playButton);
-        });
-      }
+          playButton.addEventListener("click", () => {
+            if (this.targetDetected && this.currentVideo) {
+              playButton.style.display = "none";
+              this.currentPlane.setAttribute('visible', true);
+              this.currentVideo.muted = false;
+              
+              this.currentVideo.play().catch(error => {
+                console.error('Playback failed:', error);
+                playButton.style.display = "flex";
+              });
+            }
+          });
 
-      setupVideoEventListeners(playButton) {
-        playButton.addEventListener("click", () => {
-          if (this.targetDetected && this.currentVideo) {
-            playButton.style.display = "none";
-            this.currentPlane.setAttribute('visible', true);
-            this.currentVideo.muted = false;
-            
-            this.currentVideo.play().catch(error => {
-              console.error('Playback failed:', error);
-              playButton.style.display = "flex";
+          [this.video1, this.video2].forEach(video => {
+            video.addEventListener('play', () => {
+              this.videoPlaying = true;
+              this.pauseOtherVideos();
             });
-          }
-        });
+            
+            video.addEventListener('pause', () => {
+              if (this.currentVideo === video) {
+                this.videoPlaying = false;
+              }
+            });
 
-        [this.video1, this.video2].forEach(video => {
-          video.addEventListener('play', () => {
-            this.videoPlaying = true;
-            this.pauseOtherVideos();
-          });
-          
-          video.addEventListener('pause', () => {
-            if (this.currentVideo === video) {
-              this.videoPlaying = false;
-            }
-          });
-
-          video.addEventListener('ended', () => {
-            if (this.currentVideo === video) {
-              this.videoPlaying = false;
-              playButton.style.display = "flex";
-            }
+            video.addEventListener('ended', () => {
+              if (this.currentVideo === video) {
+                this.videoPlaying = false;
+                playButton.style.display = "flex";
+              }
+            });
           });
         });
       }
